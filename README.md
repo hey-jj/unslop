@@ -8,6 +8,13 @@ question a person has to answer about it.
 It reads text. It does not detect authorship, and no finding is evidence that a
 person or a model wrote anything.
 
+Input that is a Rust source file is rejected as unsupported, exit 40, because
+gating source draws findings from statement punctuation and not from writing.
+The test reads Rust shape only. Source in another language reaches the rules
+and produces findings a reader should discount, which is the trade for a guard
+that never fires on prose. Either pass the prose, or wrap the code in a fenced
+block, which segmentation excludes.
+
 ## Install
 
 ```

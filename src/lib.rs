@@ -197,6 +197,26 @@ pub fn analyze(input: &[u8], config: &Config) -> Result<Report, AnalysisError> {
         .map_err(|e| AnalysisError::Instrumentation(format!("policy load failed: {e}")))?;
     let prepared = input::prepare(input, config)?;
     let doc = extract::build_doc(&prepared, config)?;
+    // Every profile here reads prose, and a source file is not prose. Gating
+    // one draws findings from statement punctuation rather than from writing,
+    // so the boundary fails closed instead. The prose and code split is the
+    // extractor's own: backtick fences, tilde fences, and indented blocks are
+    // all code, so a document that quotes code stays a document. The test
+    // reads Rust shape only. Source in another language reaches the rules and
+    // produces findings a reader discounts.
+    let code_blocks: Vec<Range<usize>> = doc
+        .regions
+        .iter()
+        .filter(|r| r.kind == extract::RegionKind::CodeBlock)
+        .map(|r| r.range.clone())
+        .collect();
+    if let Some((code_lines, nonblank)) = input::source_shape(&prepared.text, &code_blocks) {
+        return Err(AnalysisError::UnsupportedInput(format!(
+            "Input looks like a Rust source file: {code_lines} of {nonblank} lines \
+             outside code blocks carry code structure. Pass the prose, or wrap \
+             the code in a fenced block."
+        )));
+    }
     let norm = views::build_norm(&prepared.text, &doc);
     let mut hits = engine::scan_all(compiled, &prepared, &doc, &norm, config)?;
     rules::evaluate_structural(compiled, &prepared, &doc, &norm, config, &mut hits);

@@ -262,3 +262,15 @@ fn an_unknown_output_mode_is_a_usage_error() {
     assert_eq!(code, 2);
     assert!(stderr.contains("json or text"), "stderr: {stderr}");
 }
+
+#[test]
+fn a_source_path_is_rejected_before_it_is_read() {
+    let (code, stdout, stderr) = run_stdin(&["check", "--profile", "doc", "src/lib.rs"], b"");
+    assert_eq!(code, 40, "stderr: {stderr}");
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
+    assert_eq!(v["result_state"], "unsupported_input");
+    assert!(
+        v["error"].as_str().unwrap().contains("source path"),
+        "{stdout}"
+    );
+}

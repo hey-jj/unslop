@@ -17,6 +17,9 @@ decline and offer the pattern check instead.
 ## The loop
 
 1. Write the draft to a file. Never gate text that exists only in the conversation.
+   Extract the prose first from anything mixed: a source file with doc comments, a
+   notebook, a transcript with code in it. Exit 40 is a statement about the input,
+   never about the writing, and the fix is to pass the prose or fence the code.
 2. Read the draft yourself first, before running anything, and write down what you
    would change. Findings read first will anchor you on the tool and leave its blind
    spots in the draft. The blind read is the worklist and the linter is the gate.
@@ -223,7 +226,12 @@ Read the entry before editing. Two patterns have no rule and are marked as such.
    right: The package is the parser and has a built-in cache.
    ```
 9. **`Not just X, but Y.`** State the point. `SLOP-C001`, `SLOP-C007`, `SLOP-C008`,
-   and the rate instrument `SLOP-C009`.
+   the `rather than` and `instead of` forms on `SLOP-C003`, and the rate instrument
+   `SLOP-C009`. The keep test has two parts and decides all of them. First, keep a
+   contrast only when both halves change what the reader thinks or does: the kept
+   half says the thing, and the rejected half names something a reader would
+   otherwise have believed. Second, the sentence has to stand after the rejected
+   half is cut. A contrast that fails either part is the writer arguing with nobody.
 10. **Rule of three.** Forcing ideas into groups of three. Use the real number.
     `SLOP-C005`
 11. **Synonym cycling.** Protagonist, main character, central figure, hero in one

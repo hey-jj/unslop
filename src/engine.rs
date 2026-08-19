@@ -359,6 +359,37 @@ fn exempted(hay: &str, span: &Range<usize>, phrases: &[String]) -> bool {
     false
 }
 
+/// True when the matched past participle is being used as an adjective
+/// rather than as a verb. Three left-context shapes say so: a hyphen joining
+/// it to the word before (`well-navigated waters`), a determiner or
+/// possessive directly before it (`the navigated route`, `a landscaped
+/// garden`), and an `-ly` adverb before it (`the carefully navigated
+/// channel`). A subject before the participle (`she navigated the file`,
+/// `the report landscaped the field`) is the verb and still fires.
+fn participial_adjective(hay: &str, span: &Range<usize>) -> bool {
+    if !hay[span.clone()].to_ascii_lowercase().ends_with("ed") {
+        return false;
+    }
+    let before = &hay[..span.start];
+    // A hyphen join makes the participle half of a compound modifier.
+    let mut rev = before.chars().rev();
+    if let (Some('-'), Some(c)) = (rev.next(), rev.next()) {
+        if unicode_ident::is_xid_continue(c) {
+            return true;
+        }
+    }
+    const DETERMINERS: &[&str] = &[
+        "the", "a", "an", "its", "our", "their", "his", "her", "my", "your", "this", "that",
+        "these", "those",
+    ];
+    let prev = before
+        .split(|c: char| !c.is_alphanumeric() && c != '\'')
+        .rfind(|t| !t.is_empty())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    DETERMINERS.contains(&prev.as_str()) || (prev.len() > 3 && prev.ends_with("ly"))
+}
+
 fn cjk_present(s: &str) -> bool {
     s.chars().any(|c| {
         let u = c as u32;
@@ -690,6 +721,12 @@ fn accept_word_hit(
     if exempted(hay, &span, &rule.exemptions) {
         return;
     }
+    // SLOP-A002: a past participle standing as an adjective is not the verb
+    // the rule reads. The verb forms are unaffected, since only a term ending
+    // in -ed reaches this test.
+    if rule.id == "SLOP-A002" && participial_adjective(hay, &span) {
+        return;
+    }
     // Widen in the coordinate system the span lives in — see `scan_rx`. A Norm
     // hit maps through `to_source` (source coords, widened against `src`); every
     // other context matched in `hay` and is widened against `hay` (the caller
@@ -901,6 +938,53 @@ fn scan_rx(
                     let inside_word = before.map(unicode_ident::is_xid_continue).unwrap_or(false)
                         && after.map(unicode_ident::is_xid_continue).unwrap_or(false);
                     if !inside_word {
+                        continue;
+                    }
+                }
+            }
+            "SLOP-C004" => {
+                // The staged-agreement arm consumes its sentence boundary, so
+                // its span opens on the punctuation. The line-start arm never
+                // does, and this leaves it alone.
+                let first = hay[span.clone()].chars().next();
+                if matches!(first, Some('.' | '!' | '?')) {
+                    let before = &hay[..span.start];
+                    // A digit run that opens its line is a list marker
+                    // ("2. Granted"), not a sentence end. A digit that
+                    // follows other text on the line ends a sentence
+                    // ("version 2. Granted"), so only the marker suppresses.
+                    if before
+                        .chars()
+                        .next_back()
+                        .is_some_and(|c| c.is_ascii_digit())
+                    {
+                        let line = before.rfind('\n').map(|p| p + 1).unwrap_or(0);
+                        if before[line..]
+                            .trim_start()
+                            .chars()
+                            .all(|c| c.is_ascii_digit())
+                        {
+                            continue;
+                        }
+                    }
+                    // An abbreviation or mid-sentence period ("e.g. Yes, ...")
+                    // is not a sentence end. SLOP-C007's terminal test decides.
+                    if first == Some('.')
+                        && !crate::rules::contrast::period_is_terminal(hay, span.start + 1)
+                    {
+                        continue;
+                    }
+                    // The boundary has to sit inside one block. A newline in
+                    // the whitespace it consumed means the match reaches from
+                    // the end of one block into the next, where the
+                    // line-start arm already reads the opening and reports it
+                    // without dragging the previous block into the span.
+                    if hay[span.clone()]
+                        .chars()
+                        .skip(1)
+                        .take_while(|c| c.is_whitespace())
+                        .any(|c| c == '\n')
+                    {
                         continue;
                     }
                 }

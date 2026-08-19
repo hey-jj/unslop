@@ -652,3 +652,273 @@ fn the_named_vocabulary_is_covered() {
         );
     }
 }
+
+// --- input boundary, sentence boundary, and verb tense ---------------------
+
+/// Source code is not prose. Gating a source file draws findings from
+/// statement punctuation, so the boundary fails closed at exit 40.
+#[test]
+fn source_code_is_rejected_at_the_input_boundary() {
+    let src = concat!(
+        "//! A module that is not prose.\n",
+        "use std::io;\n",
+        "\n",
+        "#[derive(Debug)]\n",
+        "pub struct Loader {\n",
+        "    path: String,\n",
+        "}\n",
+        "\n",
+        "impl Loader {\n",
+        "    pub fn new(path: String) -> Loader {\n",
+        "        Loader { path }\n",
+        "    }\n",
+        "}\n",
+    );
+    for profile in Profile::ALL {
+        let err = analyze(src.as_bytes(), &Config::new(profile)).unwrap_err();
+        let unslop::AnalysisError::UnsupportedInput(m) = &err else {
+            panic!("{} accepted source: {err:?}", profile.as_str());
+        };
+        // The message names the shape it read, the real counts, and both
+        // remedies, so a reader knows what to do without reading the guard.
+        assert!(m.starts_with("Input looks like a Rust source file:"), "{m}");
+        assert!(m.contains("10 of 11 lines"), "{m}");
+        assert!(
+            m.contains("Pass the prose, or wrap the code in a fenced block."),
+            "{m}"
+        );
+    }
+}
+
+/// The ruled thresholds: eight lines of code structure, and 35 percent of the
+/// non-blank lines outside code blocks. A document under either bar is prose.
+#[test]
+fn the_guard_holds_both_thresholds() {
+    // Seven code lines is under the line floor however dense the file is.
+    let seven = concat!(
+        "use std::io;\n",
+        "use std::fmt;\n",
+        "use std::mem;\n",
+        "use std::ops;\n",
+        "use std::cmp;\n",
+        "use std::env;\n",
+        "use std::net;\n",
+    );
+    assert!(
+        analyze(seven.as_bytes(), &Config::new(Profile::Doc)).is_ok(),
+        "seven code lines tripped the line floor"
+    );
+
+    // Nine code lines carried by twenty lines of prose is under the ratio.
+    let mut mixed = String::new();
+    for i in 0..20 {
+        mixed.push_str(&format!(
+            "The loader reads one file per run, and this is sentence {i}.\n\n"
+        ));
+    }
+    for m in ["io", "fmt", "mem", "ops", "cmp", "env", "net", "str", "vec"] {
+        mixed.push_str(&format!("use std::{m};\n\n"));
+    }
+    assert!(
+        analyze(mixed.as_bytes(), &Config::new(Profile::Doc)).is_ok(),
+        "prose carrying nine code lines tripped the ratio"
+    );
+}
+
+/// The field-line shape is tight on purpose. A definition list writes several
+/// words after its colon and is prose, so it must not read as a field.
+#[test]
+fn a_definition_list_is_not_a_field_line() {
+    let mut doc = String::from("# Terms\n\nEach term below names one thing.\n\n");
+    for (term, gloss) in [
+        ("name", "the person who signed the record"),
+        ("reason", "the sentence a reader would accept"),
+        ("span", "the bytes the finding covers"),
+        ("state", "what the finding does to the exit code"),
+        ("profile", "the writing the draft is meant to be"),
+        ("container", "where in the document the span sits"),
+        ("digest", "the hash over the whole policy package"),
+        ("expiry", "the date after which the waiver lapses"),
+        ("signer", "the person who takes responsibility"),
+        ("remedy", "the edit that makes the finding untrue"),
+    ] {
+        doc.push_str(&format!("{term}: {gloss},\n"));
+    }
+    assert!(
+        analyze(doc.as_bytes(), &Config::new(Profile::Doc)).is_ok(),
+        "a definition list read as source"
+    );
+
+    // The same lines behind a bullet marker are prose too.
+    let bulleted = doc.replace("\nname:", "\n- name:");
+    assert!(
+        analyze(bulleted.as_bytes(), &Config::new(Profile::Doc)).is_ok(),
+        "a bulleted definition list read as source"
+    );
+}
+
+/// A document that quotes code is a document. The prose and code split is the
+/// extractor's own, so every fence style and an indented block all count as
+/// code rather than as prose lines.
+#[test]
+fn a_document_that_quotes_code_stays_prose() {
+    let backtick = concat!(
+        "# Guide\n\nRun the loader like this.\n\n",
+        "```rust\n",
+        "use std::io;\n#[derive(Debug)]\npub struct Loader {\n    path: String,\n}\n",
+        "impl Loader {\n    pub fn new() -> Loader {\n        Loader {}\n    }\n}\n",
+        "```\n\nThe loader reads one file per run.\n",
+    );
+    let tilde = backtick.replace("```rust", "~~~rust").replace("```", "~~~");
+    let indented = concat!(
+        "# Guide\n\nRun the loader like this.\n\n",
+        "    use std::io;\n    #[derive(Debug)]\n    pub struct Loader {\n",
+        "        path: String,\n    }\n    impl Loader {\n",
+        "        pub fn new() -> Loader {\n            Loader {}\n        }\n    }\n",
+        "\nThe loader reads one file per run.\n",
+    );
+    for (label, text) in [
+        ("backtick fence", backtick.to_string()),
+        ("tilde fence", tilde),
+        ("indented block", indented.to_string()),
+    ] {
+        assert!(
+            analyze(text.as_bytes(), &Config::new(Profile::Doc)).is_ok(),
+            "{label} was rejected as source"
+        );
+    }
+}
+
+/// The staged-agreement arm consumes a sentence boundary, and the boundary
+/// has to be a real one in both directions: a list marker is not a sentence
+/// end, and a sentence that ends on a numeral is.
+#[test]
+fn c004_needs_a_real_sentence_boundary() {
+    assert_silent(
+        "SLOP-C004",
+        Profile::Essay,
+        &["See the docs, e.g. granted, the flag is set, but the cache stays cold.\n"],
+    );
+    assert_fires(
+        "SLOP-C004",
+        Profile::Essay,
+        &[
+            "It shipped early. Granted, the code is shorter, but it hides the cost.\n",
+            // A numeral can end a sentence. This is the direction the blanket
+            // digit test had backwards.
+            "The stable protocol is version 2. Granted, the code is shorter, but it hides the cost.\n",
+            "The list has 2. Granted, the code is shorter, but it hides the cost.\n",
+        ],
+    );
+}
+
+/// A digit run that opens its line is a list marker, and the boundary arm
+/// never reads one as a sentence end. The same arm stays inside one block:
+/// the end of one block and the start of the next is not a boundary it may
+/// reach across.
+#[test]
+fn c004_reads_list_markers_and_block_edges_correctly() {
+    let marker = "2. Granted, the code is shorter, but it hides the cost.\n";
+    let mut text_cfg = Config::new(Profile::Essay);
+    text_cfg.input_format = unslop::InputFormat::Text;
+    let report = analyze(marker.as_bytes(), &text_cfg).unwrap();
+    assert!(
+        !report.findings.iter().any(|f| f.rule_id == "SLOP-C004"),
+        "a list marker opened a match: {:?}",
+        report
+            .findings
+            .iter()
+            .map(|f| f.rule_id.as_str())
+            .collect::<Vec<_>>()
+    );
+
+    // Across two list items the boundary arm stays out, so no finding drags
+    // the previous item into its span.
+    let two_items =
+        "Steps.\n\n1. Ship it.\n2. Granted, the code is shorter, but it hides the cost.\n";
+    let report = run(two_items, Profile::Essay);
+    for f in report.findings.iter().filter(|f| f.rule_id == "SLOP-C004") {
+        let snippet: String = serde_json::from_str(f.snippet.get()).unwrap();
+        assert!(
+            !snippet.contains('\n'),
+            "a C004 span crossed a block edge: {snippet:?}"
+        );
+    }
+}
+
+/// SLOP-A002 reads every homograph's past tense the same way it reads the
+/// present: harness structurally, navigate and landscape from the word set.
+#[test]
+fn a002_reads_the_past_tense() {
+    assert_fires(
+        "SLOP-A002",
+        Profile::Essay,
+        &[
+            "The team harnessed the momentum.\n",
+            "They harnessed it well.\n",
+            "She navigated the room.\n",
+            "She navigated the strait at dawn.\n",
+            "The report landscaped the field of available tools.\n",
+        ],
+    );
+    assert_silent(
+        "SLOP-A002",
+        Profile::Essay,
+        &[
+            "A harnessed horse waited outside.\n",
+            "The test harness ran overnight.\n",
+            "She navigated to the page.\n",
+        ],
+    );
+}
+
+/// A past participle standing as an adjective is not the verb the rule
+/// reads. Three left-context shapes mark the adjective, and the same three
+/// hold for every homograph in the set.
+#[test]
+fn a002_leaves_participial_adjectives_alone() {
+    assert_silent(
+        "SLOP-A002",
+        Profile::Essay,
+        &[
+            // Hyphen-joined compound modifier.
+            "The ship crossed well-navigated waters.\n",
+            // Determiner directly before the participle.
+            "The navigated route followed the river.\n",
+            "A landscaped garden surrounds the house.\n",
+            "A harnessed horse waited outside.\n",
+            // An -ly adverb before the participle.
+            "The carefully navigated channel appears on the chart.\n",
+        ],
+    );
+}
+
+/// Every collocation exemption carries its past-tense twin, so the honest
+/// technical past is exempt exactly as the present is.
+#[test]
+fn a002_exemptions_cover_both_tenses() {
+    for (present, past) in [
+        (
+            "She navigates to the page.\n",
+            "She navigated to the page.\n",
+        ),
+        (
+            "She navigates the file with the arrow keys.\n",
+            "She navigated the file with the arrow keys.\n",
+        ),
+        (
+            "She navigates the directory by hand.\n",
+            "She navigated the directory by hand.\n",
+        ),
+        (
+            "She navigates the tree from the root.\n",
+            "She navigated the tree from the root.\n",
+        ),
+        (
+            "She navigates the DOM to find the node.\n",
+            "She navigated the DOM to find the node.\n",
+        ),
+    ] {
+        assert_silent("SLOP-A002", Profile::Essay, &[present, past]);
+    }
+}

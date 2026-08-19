@@ -102,7 +102,7 @@ fn contains_word(hay_lower: &str, needle: &str) -> bool {
 /// silent, and an abbreviation followed by a capitalized word (`Mr. Smith`)
 /// still reads as a terminal — both resolve toward silence or the
 /// pre-existing behavior, never toward a new firing surface.
-fn period_is_terminal(text: &str, dot_end: usize) -> bool {
+pub(crate) fn period_is_terminal(text: &str, dot_end: usize) -> bool {
     let mut chars = text[dot_end..].chars();
     let Some(first) = chars.next() else {
         return true; // end of text

@@ -417,6 +417,41 @@ fn parse_stance(s: &str, what: &str) -> Result<Stance, String> {
     }
 }
 
+/// Parse a rule's optional `exemptions` table into one flat list of covering
+/// phrases. Every shape that would silently exempt nothing fails the load
+/// instead: a value that is not a table, a table with no keys, a key whose
+/// value is not an array, an empty array, and an empty phrase. A quietly dead
+/// exemption is worse than a missing one, because the guard text goes on
+/// promising it.
+fn parse_exemptions(rt: &toml::value::Table, id: &str) -> Result<Vec<String>, String> {
+    let mut out = Vec::new();
+    let Some(v) = rt.get("exemptions") else {
+        return Ok(out);
+    };
+    let table = v
+        .as_table()
+        .ok_or_else(|| format!("rule {id}: exemptions must be a table"))?;
+    if table.is_empty() {
+        return Err(format!("rule {id}: exemptions is an empty table"));
+    }
+    for (term, phrases) in table {
+        let arr = phrases
+            .as_array()
+            .ok_or_else(|| format!("rule {id}: exemptions.{term} must be an array of phrases"))?;
+        if arr.is_empty() {
+            return Err(format!("rule {id}: exemptions.{term} is an empty array"));
+        }
+        for phrase in arr {
+            let p = as_str(phrase, "exemption phrase")?;
+            if p.trim().is_empty() {
+                return Err(format!("rule {id}: exemptions.{term} has an empty phrase"));
+            }
+            out.push(p.to_lowercase());
+        }
+    }
+    Ok(out)
+}
+
 /// Parse the embedded package. Returns an error string on any structural
 /// defect. Callers surface this as `instrumentation_error`.
 pub fn load() -> Result<PolicyPackage, String> {
@@ -662,16 +697,7 @@ pub fn load() -> Result<PolicyPackage, String> {
             stances[idx] = stance_of(v, format!("rule {id} profiles.{k}"))?;
         }
 
-        let mut exemptions = Vec::new();
-        if let Some(ex) = rt.get("exemptions").and_then(|v| v.as_table()) {
-            for (_, v) in ex {
-                if let Some(arr) = v.as_array() {
-                    for phrase in arr {
-                        exemptions.push(as_str(phrase, "exemption phrase")?.to_lowercase());
-                    }
-                }
-            }
-        }
+        let exemptions = parse_exemptions(rt, &id)?;
 
         rules.push(Rule {
             id,
@@ -732,4 +758,51 @@ pub fn load() -> Result<PolicyPackage, String> {
         profiles,
         rules,
     })
+}
+
+#[cfg(test)]
+mod exemption_table_tests {
+    use super::parse_exemptions;
+
+    fn rule_table(src: &str) -> toml::value::Table {
+        toml::from_str::<toml::Value>(src)
+            .unwrap()
+            .as_table()
+            .unwrap()
+            .clone()
+    }
+
+    #[test]
+    fn a_populated_table_loads_and_lowercases() {
+        let rt = rule_table("[exemptions]\nport = [\"Serial Port\"]\n");
+        assert_eq!(
+            parse_exemptions(&rt, "SLOP-TEST").unwrap(),
+            vec!["serial port".to_string()]
+        );
+    }
+
+    #[test]
+    fn no_table_is_no_exemptions() {
+        let rt = rule_table("id = \"SLOP-TEST\"\n");
+        assert!(parse_exemptions(&rt, "SLOP-TEST").unwrap().is_empty());
+    }
+
+    /// Each of these would exempt nothing while the guard text says it does.
+    #[test]
+    fn unmatchable_tables_fail_the_load() {
+        for src in [
+            "exemptions = \"port\"\n",
+            "[exemptions]\n",
+            "[exemptions]\nport = \"serial port\"\n",
+            "[exemptions]\nport = []\n",
+            "[exemptions]\nport = [\"\"]\n",
+            "[exemptions]\nport = [\"   \"]\n",
+        ] {
+            let rt = rule_table(src);
+            assert!(
+                parse_exemptions(&rt, "SLOP-TEST").is_err(),
+                "loaded a dead exemption table: {src:?}"
+            );
+        }
+    }
 }

@@ -236,6 +236,21 @@ fn cmd_check(mut parser: lexopt::Parser) -> Result<u8, lexopt::Error> {
         }
     }
 
+    // A source path is source, never prose: fail closed before reading it,
+    // matching the content-layer guard in analyze.
+    if let Some(p) = &path {
+        let ext = std::path::Path::new(p)
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_ascii_lowercase());
+        if p != "-" && ext.as_deref() == Some("rs") {
+            let m = format!("{p} is a source path; extract the prose and gate that");
+            eprintln!("unslop: unsupported_input: {m}");
+            emit_line(&error_json("unsupported_input", &m));
+            return Ok(EXIT_UNSUPPORTED);
+        }
+    }
+
     let input = match read_input(path.as_deref()) {
         Ok(b) => b,
         Err(e) => {
