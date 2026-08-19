@@ -1,0 +1,13 @@
+# SLOP-S003 assistant-register pleasantries. Blocking set in every profile
+# including email: these are the phrases a chat assistant closes a turn with,
+# not the courtesies one person extends to another. Courtesy closings moved
+# to words/courtesy-closings.txt when the rule split.
+i hope this helps
+hope this helps
+hope that helps
+i hope that clarifies
+hope this is helpful
+thanks for maintaining
+thank you for maintaining
+keep up the great work
+keep up the good work

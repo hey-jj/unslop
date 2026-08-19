@@ -1,0 +1,17 @@
+# SLOP-A007 promotional language. Blocking set. Travel-brochure and
+# press-release diction. vibrant, bustling, groundbreaking, and world-class
+# are owner terms already held by SLOP-A001 and are not repeated here.
+nestled
+breathtaking
+renowned
+stunning
+must-visit
+must-see
+hidden gem
+picturesque
+picture-perfect
+once-in-a-lifetime
+panoramic views
+unspoiled paradise
+perfect getaway
+something for everyone

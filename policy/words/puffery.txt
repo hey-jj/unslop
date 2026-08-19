@@ -1,0 +1,21 @@
+# SLOP-A006 puffery. Blocking set. Multi-word claims about significance that
+# state nothing checkable. Four of the owner's named puffery terms live in
+# other rules and are not repeated here: pivotal moment is SLOP-I002
+# (pivotal), testament to is SLOP-A001 (testament), evolving landscape is
+# SLOP-A002 (landscape), and indelible mark is SLOP-O001.
+setting the stage for
+set the stage for
+sets the stage for
+deeply rooted
+rich cultural heritage
+rich history
+storied history
+cements its place in history
+woven into the fabric of
+etched in the annals of history
+shaped the course of history
+left a lasting legacy
+enduring legacy
+a defining moment
+marked a turning point
+stood the test of time

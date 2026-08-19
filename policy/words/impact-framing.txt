@@ -1,0 +1,17 @@
+# SLOP-F003 impact and verdict framing. Candidate tier. Phrases that rank a
+# consequence for the reader instead of stating what happens.
+severe
+severity
+urgent
+urgently
+impact
+high-impact
+the only fix
+the only solution
+must be fixed
+must be addressed
+should be prioritized
+we recommend
+worst-case scenario
+immediately
+as soon as possible

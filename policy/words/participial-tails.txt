@@ -1,0 +1,16 @@
+# SLOP-O005 participial tail openers. Candidate tier, and the rule fires only
+# on a comma-opened tail that closes its block. highlighting, showcasing,
+# underscoring, and emphasizing are owner terms held by SLOP-A003 wherever
+# they appear, and fostering by SLOP-A001, so they are not repeated here.
+ensuring
+reflecting
+demonstrating
+signaling
+solidifying
+marking
+illustrating
+underlining
+reinforcing
+affirming
+positioning
+enabling

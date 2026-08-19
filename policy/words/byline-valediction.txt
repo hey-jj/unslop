@@ -1,0 +1,12 @@
+# SLOP-S004 bylines and valedictions. Candidate tier, off in email and
+# social-post, where a sign-off is the structure of the medium.
+best regards
+kind regards
+warm regards
+sincerely
+cheers,
+regards,
+respectfully,
+reported by
+filed by
+submitted by

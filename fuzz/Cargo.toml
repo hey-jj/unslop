@@ -1,0 +1,29 @@
+[package]
+name = "unslop-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+unslop = { path = ".." }
+
+[[bin]]
+name = "fuzz_analyze"
+path = "fuzz_targets/fuzz_analyze.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_norm_mapper"
+path = "fuzz_targets/fuzz_norm_mapper.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
+members = ["."]

@@ -1,0 +1,40 @@
+# SLOP-A009 plain word swaps. Candidate tier. Each line is "inflated -> plain"
+# and the plain half becomes the suggested replacement, so the fix ships with
+# the finding. utilize and facilitate are held by SLOP-A004 and leverage by
+# SLOP-A001, so they are not repeated here. These are defaults for ordinary
+# prose, never equivalences in legal, financial, or scientific terms of art.
+numerous -> many
+in order to -> to
+due to the fact that -> because
+in the event that -> if
+prior to -> before
+subsequent to -> after
+commence -> start
+at this point in time -> now
+at the present time -> now
+for the purpose of -> to
+with regard to -> about
+at a later date -> later
+has the ability to -> can
+is able to -> can
+make use of -> use
+a large number of -> many
+the majority of -> most
+in close proximity to -> near
+on a daily basis -> daily
+on a regular basis -> regularly
+in spite of the fact that -> although
+in light of the fact that -> because
+until such time as -> until
+with the exception of -> except
+in the absence of -> without
+in conjunction with -> with
+in the vicinity of -> near
+in excess of -> more than
+provide assistance -> help
+give consideration to -> consider
+reach a decision -> decide
+make a determination -> decide
+perform an analysis of -> analyze
+conduct an investigation into -> investigate
+ascertain -> find out

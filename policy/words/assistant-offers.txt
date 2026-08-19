@@ -1,0 +1,15 @@
+# SLOP-V003 assistant turn-taking offers. Candidate tier, blocking in every
+# profile including email. These address a requester inside a loop, not a
+# correspondent. Offers addressed to a person the writer knows moved to
+# words/correspondence-offers.txt when the rule split.
+let me know if you'd like
+let me know if you would like
+would you like me to
+if you'd like, i can
+i can also
+here's what i did
+here is what i did
+i've updated the
+i have updated the
+i've gone ahead and
+as per your instructions

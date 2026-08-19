@@ -1,0 +1,13 @@
+# SLOP-A008 abstract metaphor nouns, matched only inside the of-frame. Every
+# term has a literal or domain sense, and the frame is what separates the
+# metaphor from it. gold-plating, ratchet, and endgame left this lexicon for
+# the skill hand-read list, where a person reads the sentence.
+substrate
+locus
+vantage
+primitive
+scaffolding
+modality
+paradigm
+flywheel
+vector

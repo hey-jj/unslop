@@ -1,0 +1,27 @@
+# SLOP-I005 stacked hedges. Candidate tier, every profile. Each entry carries
+# at least two uncertainty signals, which is what makes it a stack rather than
+# a hedge. Single softeners moved to words/softeners.txt (SLOP-I006).
+could potentially
+might possibly
+may perhaps
+could conceivably
+might potentially
+may possibly
+could perhaps
+would potentially
+could possibly be
+may potentially be
+might conceivably
+perhaps it may
+seems to suggest
+appears to suggest
+seems to indicate
+appears to indicate
+it may be possible that
+it might be possible that
+it would appear that
+for all intents and purposes
+your mileage may vary
+results may vary
+it remains to be seen
+only time will tell

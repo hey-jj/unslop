@@ -1,0 +1,74 @@
+# SLOP-A001 ornamental lexicon. Blocking set. One term per line, lowercase.
+# Matching: case-insensitive, word-boundary anchored, phrases allowed, prose view.
+# Every term here has no plain sense left to mean. Words that keep one moved to
+# words/decorative-diction.txt (SLOP-A010) and are reported, not blocked.
+delve
+delves
+delving
+delved
+game-changer
+game changer
+game-changing
+game changing
+tapestry
+paradigm shift
+paradigm-shifting
+seamless
+seamlessly
+myriad
+plethora
+cornucopia
+treasure trove
+wealth of
+uncharted territory
+brave new world
+new frontier
+dawn of a new
+a new era
+usher in
+ushers in
+ushering in
+pave the way
+paves the way
+paving the way
+tip of the iceberg
+bridge the gap
+revolutionize
+revolutionizes
+revolutionizing
+transformative
+groundbreaking
+trailblazing
+cutting-edge
+cutting edge
+world-class
+best-in-class
+future-proof
+next-generation
+next-gen
+supercharge
+supercharges
+turbocharge
+spearhead
+spearheads
+spearheading
+democratize
+democratizes
+reimagine
+reimagines
+redefine
+redefines
+ever-evolving
+ever-changing
+ever-growing
+vibrant
+bustling
+burgeoning
+full potential
+endless possibilities
+limitless potential
+the possibilities are endless
+garner
+garners
+garnered
+garnering
