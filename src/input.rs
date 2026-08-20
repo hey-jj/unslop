@@ -77,6 +77,10 @@ pub fn prepare(input: &[u8], config: &Config) -> Result<Prepared, AnalysisError>
 /// overlapping any code block is code and never counts. A guide with a long
 /// indented listing and a post with a tilde-fenced sample both stay prose.
 ///
+/// A source file gated as prose draws its findings from statement
+/// punctuation instead of from writing, which is why the guard rejects it
+/// outright rather than reporting on it.
+///
 /// Scope is deliberately narrow. The test reads Rust shape, and nothing else.
 /// Source in another language reaches the rules and produces findings a reader
 /// discounts, which is the documented trade for a guard that does not fire on

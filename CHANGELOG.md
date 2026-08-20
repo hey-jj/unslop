@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.1.2] - 2026-08-20
+
+### Added
+
+- `SLOP-C011` proleptic-capability-denial, candidate tier, blocking, on in all
+  six profiles. It reports a denial of a capability nobody claimed. Two clause
+  families qualify. One is a denied capability in three spellings: a subject at
+  the head of its clause with a negation and then a verb from the closed
+  capability list, a negative subject with the same verb, or the fragment whose
+  subject was left out. The other is an evidential hedge from a closed phrase
+  list. Two qualifying clauses in one block report on their own. A single clause
+  reports beside an affirmative partner that speaks about the same thing, found
+  in its own sentence, the one before, or the one after. Two clauses speak about
+  the same thing when either uses a bare pronoun, or when both name the same
+  tool noun or the same product. Each qualifying clause reports its own span and
+  judge question. A clause opening on a negation that
+  governs a base-form verb is an instruction to the reader and stays silent.
+- `SLOP-F005` rationale-leak, also a blocking candidate everywhere. It reports a
+  design argument or a reception instruction left in the text, and it counts a
+  marker only where a tool noun stands in the same sentence.
+- `SLOP-C007` gains the and-not spelling, the same figure with its second half
+  left out. The or and but spellings stay a hand read, and the guard says why.
+
+### Changed
+
+- The README opens on what the linter does and drops the paragraph about
+  authorship. The Rust-source paragraph is now three sentences.
+- The skill states that the linter and the document run together on every draft,
+  carries the two new patterns as entries 32 and 33, and gains three hand-read
+  tells, the empty restatement, the dangling which-clause, and the noun pile in
+  front of the verb.
+
 ## [0.1.1] - 2026-08-19
 
 ### Added
@@ -15,7 +47,7 @@
   split is the extractor's
   own segmentation, so backtick-fenced, tilde-fenced, and four-space indented
   samples all stay prose. The scope is Rust shape only: source in another
-  language reaches the rules and produces findings a reader should discount.
+  language reaches the rules and produces findings that include its punctuation.
   The guard catches a mistake and is not a security boundary. Counting comment
   lines closes most of the prefix evasion, and a writer determined to get past
   it still can. The error carries both remedies, which are to pass the prose or

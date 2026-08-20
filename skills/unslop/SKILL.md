@@ -9,12 +9,16 @@ allowed-tools: Bash(unslop *)
 Edit text to remove AI patterns and add human voice. The linter is the gate. This
 document is the judgment.
 
-The tool reports where a draft matches a machine-regular shape. It never scores
-authorship. Never describe it as a detector of authorship, never cite a finding as evidence that
-a person or a model wrote something, and if asked whether a text was machine-written,
-decline and offer the pattern check instead.
+The tool reports where a draft matches a machine-regular shape. Never describe it
+as a detector of authorship, never cite a finding as evidence that a person or a
+model wrote something, and if asked whether a text was machine-written, decline
+and offer the pattern check instead.
 
 ## The loop
+
+Every draft goes through both layers. Neither one alone is the review. The linter
+finds the machine-regular shapes and this document decides what each finding
+means, so run them together every time.
 
 1. Write the draft to a file. Never gate text that exists only in the conversation.
    Extract the prose first from anything mixed: a source file with doc comments, a
@@ -30,6 +34,14 @@ decline and offer the pattern check instead.
 6. Re-run after every edit. Ship only on exit 0. A written-down dismissal does not
    clear a blocking candidate. That takes the human waiver path below.
 7. Read the final draft once more for the tells no rule catches, listed at the end.
+
+Two questions belong to your own sentences, not to the draft you were handed. Ask
+them of anything you wrote or rewrote.
+
+- Does this sentence deny something nobody claimed? Say what the thing does and
+  stop there. Keep a denial only where dropping it would cost the reader a fact.
+- Does this sentence explain why the design is right? That belongs in the build
+  log or the rule guard. The reader gets what happens and what to do.
 
 ## Profiles
 
@@ -232,6 +244,10 @@ Read the entry before editing. Two patterns have no rule and are marked as such.
    half says the thing, and the rejected half names something a reader would
    otherwise have believed. Second, the sentence has to stand after the rejected
    half is cut. A contrast that fails either part is the writer arguing with nobody.
+   Pattern 32 is the same figure aimed at the writer's own subject. The elided
+   spelling, where the second half is dropped, is caught in the `and` form only:
+   `drawn from punctuation and not from writing` reports, while the `or not` and
+   `but not` spellings are a hand read.
 10. **Rule of three.** Forcing ideas into groups of three. Use the real number.
     `SLOP-C005`
 11. **Synonym cycling.** Protagonist, main character, central figure, hero in one
@@ -355,12 +371,39 @@ Read the entry before editing. Two patterns have no rule and are marked as such.
    right: To help reviewers, use the checklist before submission.
    ```
 
+### Self-description
+
+32. **Denying a capability nobody claimed**, the proleptic capability-denial
+    stack. A restatement of what the thing already does, a denial of a power no
+    reader asked about, and an evidential hedge holding up the denial. Delete
+    the denied clause and read what is left. Where the reader would then get
+    something wrong, state the scope affirmatively instead of denying its
+    opposite. Expect this to fire on honest scope facts. Try the affirmative
+    rewrite first. Keep the denial when it names a boundary a reader would
+    otherwise get wrong (`It does not measure below 2 Hz`), and cut it when it
+    denies a capability nobody claimed. `SLOP-C011`
+
+   ```
+   wrong: It reads text. It does not detect authorship, and no finding is evidence that a person wrote anything.
+   right: It reads text and reports every span that matches a rule.
+   ```
+33. **Design reasons left in the text.** The argument for why the thing works the
+    way it does, or an instruction telling the reader what to make of the output.
+    `by design`, `which is the trade`, `at the cost of`, `a reader should
+    discount`. Give the reader what happens and what to do. The reasoning belongs
+    in the build log or the rule guard. `SLOP-F005`
+
+   ```
+   wrong: The check reads Rust shape only, which is the trade for a guard that never fires on prose.
+   right: The check reads Rust shape only. Source in other languages reaches the rules as prose.
+   ```
+
 ## Adding soul
 
 Removing patterns is half the job. Sterile, voiceless writing is just as obvious.
 
-No rule scores voice, and unslop never fires on irregularity. Everything below is
-yours to judge.
+The rules find machine-regular shapes. Judging voice is your work, and everything
+below belongs to it.
 
 - **Have opinions.** React to facts instead of neutrally listing pros and cons.
 - **Vary rhythm.** Short sentences. Then longer ones that take their time. Mix it up.
@@ -369,8 +412,8 @@ yours to judge.
 - **Use `I` when it fits.** First person is not unprofessional. The `essay`,
   `blog-post`, `email`, and `social-post` profiles turn the first-person rule off for
   exactly this reason.
-- **Let some mess in.** Perfect structure looks machine-made. The linter matches
-  machine-regular shapes and has nothing to say about mess.
+- **Let some mess in.** Perfect structure looks machine-made, and mess sits
+  outside what any of these rules read.
 - **Be specific.** Not "this is concerning" but "there's something unsettling about
   agents churning away at 3am."
 
@@ -379,6 +422,24 @@ yours to judge.
 Read the draft once more for these. A green check does not clear them.
 
 - Every paragraph the same length, every section the same shape.
+- A sentence that restates what the thing does and adds nothing. `It reads
+  text.` and `The tool processes input.` carry no fact a reader can use. The
+  rules read one only as the affirmative half of pattern 32, so a restatement
+  standing on its own reaches no finding. Ask what the sentence would tell a
+  reader who already knows what the thing is for, and cut it when the answer is
+  nothing.
+- A which-clause left hanging at the end of a sentence, pointing at the whole
+  clause before it instead of at any noun in it. Ask what the `which` stands for.
+  Where the answer is the entire preceding sentence, cut the clause or give it a
+  subject and let it stand as its own sentence.
+- Nouns piled in front of the verb, so the reader reaches the end and starts
+  over. Count the nouns before the first verb. Three is a rewrite.
+
+   ```
+   wrong: Input that is a Rust source file is rejected as unsupported, exit 40, because gating source draws findings from statement punctuation and not from writing.
+   right: A Rust source file is rejected with exit 40. Pass the prose instead.
+   ```
+
 - Openings that clear the throat before the first real sentence.
 - A conclusion that restates the piece instead of ending it.
 - Balanced pairs where the writer has no stake in either half.
@@ -387,10 +448,10 @@ Read the draft once more for these. A green check does not clear them.
   deleted with no loss.
 - A section that could be dropped whole without the reader noticing.
 - Semicolons. The house form prefers a period or a comma, and two joined clauses
-  are usually two sentences. unslop does not flag them outside `doc`, because a
-  semicolon is a writer's choice and not a signal that a machine wrote the line.
-  In `doc` it blocks, where the reader is following instructions, and in `report`
-  it reports for you to answer.
+  are usually two sentences. unslop flags them in `doc` only, where the reader is
+  following instructions, and reports them in `report` for you to answer.
+  Everywhere else it stays quiet, because a semicolon marks a writer's choice and
+  a machine leaves its marks elsewhere.
 
 ## Patterns no rule will catch
 

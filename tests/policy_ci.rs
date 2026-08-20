@@ -52,7 +52,7 @@ fn every_rule_has_guard_tier_lifecycle_and_profiles() {
 #[test]
 fn engines_compile_once_and_load() {
     let cp = unslop::engine::compiled().expect("policy compiles");
-    assert_eq!(cp.pkg.rules.len(), 91);
+    assert_eq!(cp.pkg.rules.len(), 93);
 }
 
 #[test]

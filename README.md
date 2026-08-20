@@ -1,19 +1,14 @@
 # unslop
 
-A deterministic linter for the patterns that mark writing as machine-generated.
+A deterministic linter for formulaic writing patterns: filler, hedging, puffery,
+stock transitions, and the punctuation habits that travel with them.
 Point it at an essay, a blog post, an email, a report, documentation, or a short
 post. It reports the exact span that matched, the rule that matched it, and the
 question a person has to answer about it.
 
-It reads text. It does not detect authorship, and no finding is evidence that a
-person or a model wrote anything.
-
-Input that is a Rust source file is rejected as unsupported, exit 40, because
-gating source draws findings from statement punctuation and not from writing.
-The test reads Rust shape only. Source in another language reaches the rules
-and produces findings a reader should discount, which is the trade for a guard
-that never fires on prose. Either pass the prose, or wrap the code in a fenced
-block, which segmentation excludes.
+A Rust source file is rejected with exit 40. Pass the prose instead, or wrap the
+code in a fenced block. unslop lints source in other languages as prose, so its
+punctuation shows up in the findings.
 
 ## Install
 
@@ -53,7 +48,7 @@ unslop check --profile email message.txt
 
 ## What it looks for
 
-Ninety-one rules in twenty-two families. Ornamental and promotional vocabulary, puffery,
+Ninety-three rules in twenty-two families. Ornamental and promotional vocabulary, puffery,
 filler and transition tics, intensifiers and unquantified claims, contrast rhetoric,
 and stock attribution. Dash and colon habits, title case, boldface, and emoji. The
 chat-assistant register, verbatim self-duplication, and passive voice with the actor

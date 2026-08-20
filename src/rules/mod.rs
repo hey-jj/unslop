@@ -10,6 +10,7 @@ pub mod document_contract;
 pub mod duplication;
 pub mod emphasis;
 pub mod mechanical;
+pub mod process_facts;
 pub mod rendered;
 pub mod sentence;
 pub mod structural;
@@ -114,6 +115,21 @@ pub fn implemented_param_keys() -> &'static [(&'static str, &'static str)] {
         ("SLOP-C010", "breadth_signals"),
         ("SLOP-C010", "category_heads"),
         ("SLOP-C010", "motion_verbs"),
+        ("SLOP-C011", "negation_window_tokens"),
+        ("SLOP-C011", "verb_window_tokens"),
+        ("SLOP-C011", "negative_subject_window_tokens"),
+        ("SLOP-C011", "subject_pronouns"),
+        ("SLOP-C011", "product_names"),
+        // Declared once here and read by SLOP-F005 as its anchor set.
+        ("SLOP-C011", "tool_nouns"),
+        ("SLOP-C011", "imperative_negations"),
+        ("SLOP-C011", "finite_negations"),
+        ("SLOP-C011", "capability_verbs_base"),
+        ("SLOP-C011", "capability_verbs_s"),
+        ("SLOP-C011", "capability_verbs_ing"),
+        ("SLOP-C011", "hedges"),
+        ("SLOP-F005", "design_markers"),
+        ("SLOP-F005", "reception_markers"),
         ("SLOP-A008", "of_within_tokens"),
         ("SLOP-L001", "irregular_participles"),
         ("SLOP-L001", "temporal_nouns"),
@@ -178,6 +194,7 @@ pub fn implemented_rule_ids() -> Vec<&'static str> {
     ids.extend(density::HANDLED);
     ids.extend(sentence::HANDLED);
     ids.extend(attribution::HANDLED);
+    ids.extend(process_facts::HANDLED);
     ids.extend(structural::HANDLED);
     ids.extend(document_contract::HANDLED);
     ids.extend(rendered::HANDLED);
@@ -221,6 +238,7 @@ pub fn evaluate_structural(
     structural::evaluate(cp, prepared, doc, config, hits);
     sentence::evaluate(cp, prepared, doc, norm, config, hits);
     attribution::evaluate(cp, prepared, norm, config, hits);
+    process_facts::evaluate(cp, prepared, norm, config, hits);
     document_contract::evaluate(cp, prepared, doc, config, hits);
     rendered::evaluate(cp, prepared, doc, config, hits);
     coverage::evaluate(cp, prepared, doc, config, hits);
