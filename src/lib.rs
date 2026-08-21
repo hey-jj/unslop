@@ -5,6 +5,11 @@
 //! function of `(input, config, policy)`. The embedded policy package is the
 //! single rule source.
 //!
+//! `analyze` returns an error for input shaped like a Rust source file. The
+//! test reads Rust shape only, so wrap code in a fenced block or pass the
+//! prose alone, and see [`input::source_shape`] for the thresholds and the
+//! full scope statement.
+//!
 //! See also: ai-slop gates the prose a code repository ships, and
 //! slop-detector reads text someone sent you.
 
@@ -29,32 +34,35 @@ pub const TOOL_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Profile {
-    Essay,
+    GeneralWriting,
     BlogPost,
     Email,
     Report,
     Doc,
     SocialPost,
+    Comment,
 }
 
 impl Profile {
-    pub const ALL: [Profile; 6] = [
-        Profile::Essay,
+    pub const ALL: [Profile; 7] = [
+        Profile::GeneralWriting,
         Profile::BlogPost,
         Profile::Email,
         Profile::Report,
         Profile::Doc,
         Profile::SocialPost,
+        Profile::Comment,
     ];
 
     pub fn as_str(self) -> &'static str {
         match self {
-            Profile::Essay => "essay",
+            Profile::GeneralWriting => "general-writing",
             Profile::BlogPost => "blog-post",
             Profile::Email => "email",
             Profile::Report => "report",
             Profile::Doc => "doc",
             Profile::SocialPost => "social-post",
+            Profile::Comment => "comment",
         }
     }
 
@@ -280,6 +288,17 @@ pub fn verify(input: &[u8], approval: &Approval, now_unix: i64) -> VerifyOutcome
 /// The sha256 digest of the canonicalized embedded policy package.
 pub fn policy_digest() -> String {
     policy::compute_digest()
+}
+
+/// The span a whole-document finding reports: the first character of the
+/// payload, or an empty span when there is no payload. A rule that speaks
+/// about the document rather than about a place in it still has to hand back
+/// a span, and the reported span has to sit on character boundaries like every
+/// other. Taking one byte was wrong the moment a document opened on anything
+/// outside ASCII, which a leading emoji, an em dash, and an accented letter
+/// all do, and the span invariant then failed the whole run closed.
+pub(crate) fn first_char_span(s: &str) -> Range<usize> {
+    0..s.chars().next().map(char::len_utf8).unwrap_or(0)
 }
 
 /// Clamp a byte range outward to char boundaries of `s`.

@@ -20,7 +20,7 @@ fn ids(report: &unslop::Report) -> Vec<&str> {
 #[test]
 fn essay_excerpt_is_stable() {
     let text = fixture("essay-excerpt.md");
-    let report = run(&text, Profile::Essay);
+    let report = run(&text, Profile::GeneralWriting);
     assert_invariants(&text, &report);
     assert_eq!(
         ids(&report),

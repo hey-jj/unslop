@@ -32,7 +32,7 @@ fn assert_silent(id: &str, profile: Profile, cases: &[&str]) {
 fn a006_puffery() {
     assert_fires(
         "SLOP-A006",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "The deal set the stage for a longer partnership.\n",
             "The custom is deeply rooted in the valley.\n",
@@ -41,7 +41,7 @@ fn a006_puffery() {
     );
     assert_silent(
         "SLOP-A006",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "The deal cut the filing deadline from 30 days to 10.\n",
             "The custom started in 1890 and the valley kept it.\n",
@@ -70,7 +70,7 @@ fn a007_promotional_language() {
 fn a008_metaphor_nouns_need_the_of_frame() {
     assert_fires(
         "SLOP-A008",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "The substrate of the argument never changed.\n",
             "Our vantage of the year is narrow.\n",
@@ -80,7 +80,7 @@ fn a008_metaphor_nouns_need_the_of_frame() {
     // Outside the frame the same words are usually meant literally.
     assert_silent(
         "SLOP-A008",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "The policy is the substrate for every later decision.\n",
             "The vector pointed north.\n",
@@ -103,7 +103,7 @@ fn a008_metaphor_nouns_need_the_of_frame() {
 fn a009_plain_word_swaps_carry_their_fix() {
     assert_fires(
         "SLOP-A009",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "We reviewed numerous drafts prior to the meeting.\n",
             "In order to file, commence the process online.\n",
@@ -111,11 +111,11 @@ fn a009_plain_word_swaps_carry_their_fix() {
     );
     assert_silent(
         "SLOP-A009",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &["We reviewed many drafts before the meeting.\n"],
     );
 
-    let mut config = Config::new(Profile::Essay);
+    let mut config = Config::new(Profile::GeneralWriting);
     config.suggest = true;
     let report = analyze(b"We reviewed Numerous drafts.\n", &config).unwrap();
     let f = report
@@ -131,7 +131,7 @@ fn a009_plain_word_swaps_carry_their_fix() {
 fn o006_formulaic_challenges() {
     assert_fires(
         "SLOP-O006",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "Despite challenges, the shop continues to thrive.\n",
             "The team weathered the storm and came out stronger.\n",
@@ -139,7 +139,7 @@ fn o006_formulaic_challenges() {
     );
     assert_silent(
         "SLOP-O006",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &["The shop lost two suppliers in March and replaced one in June.\n"],
     );
 }
@@ -150,7 +150,7 @@ fn o006_formulaic_challenges() {
 fn o005_participial_tail_needs_the_block_final_position() {
     assert_fires(
         "SLOP-O005",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "The team cut load time by half, demonstrating its commitment to speed.\n",
             "The council met twice, ensuring every objection was heard.\n",
@@ -158,7 +158,7 @@ fn o005_participial_tail_needs_the_block_final_position() {
     );
     assert_silent(
         "SLOP-O005",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             // Mid-block: the clause does not close the block.
             "The council met twice, ensuring every objection was heard. Two passed.\n",
@@ -174,12 +174,12 @@ fn o005_participial_tail_needs_the_block_final_position() {
 fn m007_colon_as_connector() {
     assert_fires(
         "SLOP-M007",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &["If you are coming from automation: instead of handlers, you name conditions.\n"],
     );
     assert_silent(
         "SLOP-M007",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             // A colon introducing a list has no word after it on the line.
             "The rule covers three things:\n\n- one\n- two\n- three\n",
@@ -197,7 +197,7 @@ fn m007_colon_as_connector() {
 fn c010_false_range_needs_a_range_signal_and_unscaled_endpoints() {
     assert_fires(
         "SLOP-C010",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "The book covers everything from philosophy to cooking.\n",
             "Her work ranges from portraiture to civic planning.\n",
@@ -205,7 +205,7 @@ fn c010_false_range_needs_a_range_signal_and_unscaled_endpoints() {
     );
     assert_silent(
         "SLOP-C010",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             // Real scales.
             "Attendance ranges from 30 to 200 people.\n",
@@ -220,12 +220,12 @@ fn c010_false_range_needs_a_range_signal_and_unscaled_endpoints() {
 fn o007_name_dropping_is_anchored_three_ways() {
     assert_fires(
         "SLOP-O007",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &["The work was featured in Wired, The Atlantic, and Vogue.\n"],
     );
     assert_silent(
         "SLOP-O007",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             // No attribution trigger.
             "The team met Ana, Ben, and Chris at the depot.\n",
@@ -241,12 +241,12 @@ fn o007_name_dropping_is_anchored_three_ways() {
 fn o008_generic_conclusion_is_anchored_to_the_last_block() {
     assert_fires(
         "SLOP-O008",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &["Progress was slow this year.\n\nThe future looks bright.\n"],
     );
     assert_silent(
         "SLOP-O008",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             // Mid-document the same line is a passing remark.
             "The future looks bright.\n\nThe budget closes on Friday.\n",
@@ -261,7 +261,7 @@ fn o008_generic_conclusion_is_anchored_to_the_last_block() {
 fn l001_agentive_passive_only_with_the_actor_present() {
     assert_fires(
         "SLOP-L001",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "The file is parsed by the loader.\n",
             "The totals have been checked by the auditor.\n",
@@ -270,7 +270,7 @@ fn l001_agentive_passive_only_with_the_actor_present() {
     );
     assert_silent(
         "SLOP-L001",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             // No actor: nothing to move to the front.
             "The file is parsed at startup.\n",
@@ -284,7 +284,7 @@ fn l001_agentive_passive_only_with_the_actor_present() {
 #[test]
 fn l002_passive_density_reports_a_rate_and_never_gates() {
     let text = "The file is parsed by the loader. The totals were checked by the auditor.\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     let f = report
         .findings
         .iter()
@@ -302,12 +302,18 @@ fn l003_dense_sentence_counts_words_and_clause_commas() {
         "The {} ended.\n",
         "committee reviewed the second consultation and ".repeat(9)
     );
-    assert!(fires(&long, Profile::Essay, "SLOP-L003"), "45-word floor");
+    assert!(
+        fires(&long, Profile::GeneralWriting, "SLOP-L003"),
+        "45-word floor"
+    );
     let commas = "The plan, which was late, which was over budget, which nobody read, failed.\n";
-    assert!(fires(commas, Profile::Essay, "SLOP-L003"), "clause commas");
+    assert!(
+        fires(commas, Profile::GeneralWriting, "SLOP-L003"),
+        "clause commas"
+    );
     assert_silent(
         "SLOP-L003",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "The plan failed.\n",
             // Commas inside numbers are not clause commas.
@@ -359,7 +365,7 @@ fn m008_curly_quotes_fire_in_doc_only() {
     let text = "The report is \u{201C}ready\u{201D} for review.\n";
     assert!(fires(text, Profile::Doc, "SLOP-M008"), "silent in doc");
     for p in [
-        Profile::Essay,
+        Profile::GeneralWriting,
         Profile::BlogPost,
         Profile::Email,
         Profile::Report,
@@ -395,12 +401,12 @@ fn email_keeps_the_assistant_half_and_drops_the_human_half() {
 fn s001_attribution_is_anchored_to_block_start() {
     assert!(fires(
         "Generated by an assistant.\n",
-        Profile::Essay,
+        Profile::GeneralWriting,
         "SLOP-S001"
     ));
     assert_silent(
         "SLOP-S001",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &["The summary generated by the survey team arrived late.\n"],
     );
 }
@@ -410,7 +416,7 @@ fn s001_attribution_is_anchored_to_block_start() {
 #[test]
 fn every_finding_carries_a_container_label() {
     let text = "# The Report On Progress\n\n> A quoted line with delve inside.\n\nWe delve here.\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     let labeled: Vec<(&str, &str)> = report
         .findings
         .iter()
@@ -433,14 +439,14 @@ fn every_finding_carries_a_container_label() {
 #[test]
 fn the_density_block_describes_the_document_and_never_gates() {
     let clean = "The rain arrived late on Thursday and stayed for two days.\n";
-    let report = run(clean, Profile::Essay);
+    let report = run(clean, Profile::GeneralWriting);
     assert_eq!(report.result_state, "no_findings");
     assert!(report.coverage.density.word_count > 0);
     assert_eq!(report.coverage.density.byte_len, clean.len());
     assert!(report.coverage.density.families.is_empty());
 
     let slop = "We delve into the vibrant tapestry. We delve again.\n";
-    let report = run(slop, Profile::Essay);
+    let report = run(slop, Profile::GeneralWriting);
     let ornamental = report
         .coverage
         .density
@@ -464,12 +470,12 @@ fn the_density_block_describes_the_document_and_never_gates() {
 fn o008_matches_whole_words_only() {
     assert_silent(
         "SLOP-O008",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &["Work stalled.\n\nThe future looks brighter after the repair.\n"],
     );
     assert_fires(
         "SLOP-O008",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &["Work stalled.\n\nThe future looks bright.\n"],
     );
 }
@@ -492,7 +498,7 @@ fn o008_looks_past_a_trailing_signoff() {
 fn l001_reads_irregular_participles_and_any_actor() {
     assert_fires(
         "SLOP-L001",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "The answer is known by everyone.\n",
             "The song was sung by the choir.\n",
@@ -507,7 +513,7 @@ fn l001_reads_irregular_participles_and_any_actor() {
 fn l001_ignores_a_temporal_by_phrase() {
     assert_silent(
         "SLOP-L001",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "The work was completed by Friday.\n",
             "The report was finished by noon.\n",
@@ -545,7 +551,7 @@ fn a_soft_wrap_does_not_start_a_block() {
 fn m007_reads_lists_and_the_cataphoric_form() {
     assert_silent(
         "SLOP-M007",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "The gap is eight seats: four in support and four on the night shift.\n",
             "What I learned is this: you pack the extra blanket.\n",
@@ -554,7 +560,7 @@ fn m007_reads_lists_and_the_cataphoric_form() {
     );
     assert_fires(
         "SLOP-M007",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &["If you are coming from automation: instead of handlers, you name conditions.\n"],
     );
 }
@@ -565,12 +571,12 @@ fn m007_reads_lists_and_the_cataphoric_form() {
 fn o007_reads_the_inverted_listing_and_skips_the_calendar() {
     assert_fires(
         "SLOP-O007",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &["Wired, The Atlantic, and Vogue covered the work last spring.\n"],
     );
     assert_silent(
         "SLOP-O007",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &["The story was reported by Reuters and Bloomberg on Tuesday morning.\n"],
     );
 }
@@ -580,7 +586,7 @@ fn o007_reads_the_inverted_listing_and_skips_the_calendar() {
 fn c010_arms_and_suppressions() {
     assert_fires(
         "SLOP-C010",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             // Arm A, a breadth signal anywhere in the sentence.
             "The book covers everything from philosophy to cooking.\n",
@@ -591,7 +597,7 @@ fn c010_arms_and_suppressions() {
     );
     assert_silent(
         "SLOP-C010",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             // Suppression 1, a quantity endpoint.
             "Attendance ranges from 30 to 200 people.\n",
@@ -611,12 +617,15 @@ fn c010_arms_and_suppressions() {
 /// keeps one reports.
 #[test]
 fn the_ornamental_split_tiers_by_whether_a_plain_sense_survives() {
-    let blocked = run("The tapestry of voices was seamless.\n", Profile::Essay);
+    let blocked = run(
+        "The tapestry of voices was seamless.\n",
+        Profile::GeneralWriting,
+    );
     assert!(blocked
         .findings
         .iter()
         .any(|f| f.rule_id == "SLOP-A001" && f.state == "violation"));
-    let reported = run("Unlock is a file on a YubiKey.\n", Profile::Essay);
+    let reported = run("Unlock is a file on a YubiKey.\n", Profile::GeneralWriting);
     assert!(reported
         .findings
         .iter()
@@ -796,12 +805,12 @@ fn a_document_that_quotes_code_stays_prose() {
 fn c004_needs_a_real_sentence_boundary() {
     assert_silent(
         "SLOP-C004",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &["See the docs, e.g. granted, the flag is set, but the cache stays cold.\n"],
     );
     assert_fires(
         "SLOP-C004",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "It shipped early. Granted, the code is shorter, but it hides the cost.\n",
             // A numeral can end a sentence. This is the direction the blanket
@@ -812,31 +821,439 @@ fn c004_needs_a_real_sentence_boundary() {
     );
 }
 
-/// A digit run that opens its line is a list marker, and the boundary arm
-/// never reads one as a sentence end. The same arm stays inside one block:
-/// the end of one block and the start of the next is not a boundary it may
-/// reach across.
+/// All eight praise entries are anchored to the opening of a sentence, a
+/// line, or a list item, because that is where performed agreement lives.
+/// The set is anchored whole, so no entry is left as a way around the
+/// discrimination. Decoration in front of the phrase does not move it.
+#[test]
+fn v002_anchors_the_eight_praise_entries() {
+    assert_fires(
+        "SLOP-V002",
+        Profile::Comment,
+        &[
+            "Great question. The parser reads the file.\n",
+            "Good question. The parser reads the file.\n",
+            "Excellent question. The parser reads the file.\n",
+            "That's a great question. The parser reads the file.\n",
+            "Great point. The parser reads the file.\n",
+            "- Excellent point. The parser reads the file.\n",
+            "You're absolutely right. The parser reads the file.\n",
+            "You are absolutely right. The parser reads the file.\n",
+            // A party popper is decoration, and the block-start test reads
+            // past it, so the phrase stays where the reader sees it.
+            "\u{1F389} Great question! The parser reads the file.\n",
+        ],
+    );
+    assert_silent(
+        "SLOP-V002",
+        Profile::Comment,
+        &[
+            "he asked a great question\n",
+            "He made a great point about the allocator.\n",
+            "She raised an excellent question about the allocator.\n",
+            "The reviewer called it an excellent point and moved on.\n",
+            "I said you are absolutely right to worry about it.\n",
+        ],
+    );
+}
+
+/// The emoji before the phrase is decoration and the block-start test looks
+/// past it, so an anchored entry keeps its position and the emoji reports on
+/// its own rule. SLOP-T001's block-start entry was broken the same way and
+/// recovers with the same fix.
+#[test]
+fn leading_decoration_does_not_move_the_block_start() {
+    let text = "\u{1F389} Great question! The parser reads the file.\n";
+    let report = run(text, Profile::Comment);
+    assert!(has_rule(&report, "SLOP-V002"), "the praise entry moved");
+    assert!(has_rule(&report, "SLOP-M006"), "the emoji reports itself");
+
+    for text in [
+        "\u{1F389} Overall, the design works.\n",
+        "\u{2705} Overall, the design works.\n",
+        "Overall, the design works.\n",
+    ] {
+        assert!(
+            fires(text, Profile::Doc, "SLOP-T001"),
+            "T001 lost its block-start entry behind decoration: {text:?}"
+        );
+    }
+    // A comma or a dash is not decoration: a word behind one is mid-sentence
+    // and the test must still say so.
+    assert_silent(
+        "SLOP-T001",
+        Profile::Doc,
+        &["The build is green, overall the design works.\n"],
+    );
+}
+
+/// A bullet carried in from a rendered list is a marker, so the block-start
+/// test reads past it and an anchored phrase keeps its position. The four
+/// glyphs are listed one by one because the ranges around them split by
+/// accident: the geometric shapes a nested level uses were already
+/// transparent and the plain bullet was not.
+#[test]
+fn a_pasted_bullet_does_not_move_the_block_start() {
+    for glyph in ['\u{2022}', '\u{2023}', '\u{2043}', '\u{2219}', '\u{25E6}'] {
+        let text = format!("{glyph} Great question! The parser reads the file.\n");
+        assert!(
+            fires(&text, Profile::Comment, "SLOP-V002"),
+            "a praise opener moved behind {glyph:?}"
+        );
+        let overall = format!("{glyph} Overall, the design works.\n");
+        assert!(
+            fires(&overall, Profile::Doc, "SLOP-T001"),
+            "T001 lost its opener behind {glyph:?}"
+        );
+    }
+    // U+00B7 is a letter in Catalan and a separator in running prose, not
+    // what a rendered list pastes as, so it gets no transparency.
+    assert_silent(
+        "SLOP-T001",
+        Profile::Doc,
+        &["\u{00B7} Overall, the design works.\n"],
+    );
+}
+
+/// Text mode has no parser to strip list markers, so the extractor opens the
+/// prose range past the marker run itself. Without that, every rule anchored
+/// to a block start read the position after the marker rather than the
+/// position a reader sees.
+#[test]
+fn text_mode_reads_past_a_list_marker() {
+    let fires_text = |text: &str, id: &str| {
+        let mut cfg = Config::new(Profile::Doc);
+        cfg.input_format = unslop::InputFormat::Text;
+        analyze(text.as_bytes(), &cfg)
+            .unwrap()
+            .findings
+            .iter()
+            .any(|f| f.rule_id == id)
+    };
+    for (marker, id, text) in [
+        ("dash", "SLOP-T001", "- Overall, the design works.\n"),
+        ("star", "SLOP-M003", "* However, the parser is faster.\n"),
+        ("plus", "SLOP-T002", "+ Moreover, the parser is faster.\n"),
+        (
+            "bullet",
+            "SLOP-T001",
+            "\u{2022} Overall, the design works.\n",
+        ),
+        (
+            "ordered paren",
+            "SLOP-T001",
+            "1) Overall, the design works.\n",
+        ),
+        ("quote", "SLOP-S001", "> Generated by an AI assistant.\n"),
+        ("heading", "SLOP-S004", "# Best regards,\n"),
+    ] {
+        assert!(
+            fires_text(text, id),
+            "{marker}-led line: {id} stayed silent"
+        );
+    }
+    // A marker glyph with no space after it is ordinary text, so a rule, a
+    // negative number, and a hashtag keep their bytes.
+    let mut cfg = Config::new(Profile::Doc);
+    cfg.input_format = unslop::InputFormat::Text;
+    for text in ["---\n", "-5 degrees below Overall\n", "#tag Overall here\n"] {
+        let report = analyze(text.as_bytes(), &cfg).unwrap();
+        assert!(
+            !report.findings.iter().any(|f| f.rule_id == "SLOP-T001"),
+            "a non-marker was stripped: {text:?}"
+        );
+    }
+}
+
+/// good catch and great catch left the lexicon. Their honest use opens a
+/// line, so anchoring would have discriminated nothing. The paired residue
+/// still reports, on the anchored phrase beside them.
+#[test]
+fn v002_no_longer_reads_a_reviewer_catching_something() {
+    assert_silent(
+        "SLOP-V002",
+        Profile::Comment,
+        &[
+            "Good catch.\n",
+            "Great catch.\n",
+            "Good catch, the offset was off by one.\n",
+        ],
+    );
+    let text = "Good catch! You're absolutely right.\n";
+    let report = run(text, Profile::Comment);
+    let spans: Vec<String> = report
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "SLOP-V002")
+        .map(|f| serde_json::from_str::<String>(f.snippet.get()).unwrap())
+        .collect();
+    assert_eq!(spans, vec!["You're absolutely right"]);
+
+    let words = include_str!("../policy/words/assistant-voice.txt").to_ascii_lowercase();
+    for phrase in ["good catch", "great catch", "nice catch", "makes sense"] {
+        assert!(
+            !words.lines().any(|l| l.trim() == phrase),
+            "{phrase:?} must stay out of the assistant register"
+        );
+    }
+}
+
+/// fair hit is the concession entry and carries no anchor, because position
+/// tells nothing apart here: opening a reply with it and writing it mid
+/// sentence are the same tell. Two collisions ride on it and both reach the
+/// judge rather than an exemption.
+#[test]
+fn v002_reads_fair_hit_wherever_it_sits() {
+    assert_fires(
+        "SLOP-V002",
+        Profile::Comment,
+        &[
+            "Fair hit. I'll revise the section.\n",
+            "That's a fair hit on the design.\n",
+            "Fair hit on the naming, I'll change it.\n",
+            // Both collisions fire and are answered at the judge question:
+            // the literal sense, and the word that contains the entry.
+            "The replay showed a fair hit to the shoulder.\n",
+            "That was an unfair hit.\n",
+        ],
+    );
+    // The neighbours the ruling keeps out: three set phrases and a cricket
+    // idiom, none of which is the concession this entry reads.
+    assert_silent(
+        "SLOP-V002",
+        Profile::Comment,
+        &[
+            "Fair point, I'll change it.\n",
+            "Fair enough.\n",
+            "It's a fair cop.\n",
+            "That was a fair knock.\n",
+        ],
+    );
+    let words = include_str!("../policy/words/assistant-voice.txt").to_ascii_lowercase();
+    assert!(words.lines().any(|l| l.trim() == "fair hit"));
+    for phrase in ["fair callout", "fair ding", "fair point", "fair knock"] {
+        assert!(
+            !words.lines().any(|l| l.trim() == phrase),
+            "{phrase:?} is not in this round"
+        );
+    }
+}
+
+/// The line-start arm splits by word. although and though have no temporal
+/// reading and fire unqualified. A while clause drops on either of the two
+/// shapes that mark time passing, a progressive before the comma or a
+/// participle straight after the keyword. The bare durative present is the
+/// stated miss and still fires.
+#[test]
+fn c004_tells_concessive_while_from_temporal_while() {
+    assert_silent(
+        "SLOP-C004",
+        Profile::GeneralWriting,
+        &[
+            // The progressive drop.
+            "While you are working, you might notice unexpected changes.\n",
+            "While the loader is reading the manifest, the cache stays cold.\n",
+            "While we were waiting, the build finished.\n",
+            // The participial drop: a temporal while-participle takes an
+            // activity verb.
+            "While working on the migration, we found a race.\n",
+            "While redistributing the build, we hit a limit.\n",
+            "While reviewing the diff, the reader loses the thread.\n",
+        ],
+    );
+    assert_fires(
+        "SLOP-C004",
+        Profile::GeneralWriting,
+        &[
+            "While the parser is slower, it handles more cases.\n",
+            // The stated miss: a durative present with no progressive.
+            "While the build runs, grab a coffee.\n",
+            // although and though never take either test.
+            "Although you are working, the changes land anyway.\n",
+            "Though we were waiting, the build finished.\n",
+        ],
+    );
+    // One adverb may stand between the be-form and the -ing word, which is
+    // where a writer puts still or already. Two may not.
+    assert_silent(
+        "SLOP-C004",
+        Profile::GeneralWriting,
+        &[
+            "While we were already running the testsuite, the build stayed green.\n",
+            "While the loader is still reading the manifest, the cache stays cold.\n",
+            "While the job is currently running, the queue holds.\n",
+            "While the parser is quietly building the tree, the reader waits.\n",
+        ],
+    );
+    assert_fires(
+        "SLOP-C004",
+        Profile::GeneralWriting,
+        &[
+            // Two tokens in the gap: the pair is no longer a verb group.
+            "While we were already quietly running the tests, the build stayed green.\n",
+            // An adverb in the gap but no participle after it.
+            "While the API is now stable, the docs lag behind.\n",
+        ],
+    );
+
+    // The eight concession participles are exempt from the participial drop,
+    // because a concessive while-participle takes a verb of cognition.
+    for verb in [
+        "acknowledging",
+        "recognizing",
+        "granting",
+        "accepting",
+        "conceding",
+        "admitting",
+        "noting",
+        "allowing",
+    ] {
+        let text = format!("While {verb} the risk, the team proceeded anyway.\n");
+        assert!(
+            fires(&text, Profile::GeneralWriting, "SLOP-C004"),
+            "the concession exemption lost {verb}"
+        );
+    }
+}
+
+/// The participial drop asks for a participle heading the clause, and a finite
+/// verb inside the clause says the -ing word is doing something else there.
+/// The set is closed and carries no morphology, because an -s scan reads every
+/// plural noun as a verb and an -ed scan reads every participial adjective as
+/// one.
+#[test]
+fn c004_participial_drop_needs_a_clause_with_no_finite_verb() {
+    // A finite verb means the -ing word modifies a noun or stands as a
+    // subject. Both of these were measured as concessions the drop lost
+    // before the gate existed.
+    assert_fires(
+        "SLOP-C004",
+        Profile::GeneralWriting,
+        &[
+            "While programming language parsers are usually written manually, nom differs.\n",
+            "While manipulating ASTs is the most flexible way, iterators are easier.\n",
+            // One entry from each row of the closed set.
+            "While it can be slow, it is correct.\n",
+            "While the parsing rules have changed, the output has not.\n",
+            "While running totals do drift, the ledger reconciles.\n",
+        ],
+    );
+    // be, been, and being are deliberately out of the finite set, so a
+    // participial clause built on them still drops.
+    assert_silent(
+        "SLOP-C004",
+        Profile::GeneralWriting,
+        &[
+            "While being tested, the parser reports every span.\n",
+            "While working on the migration, the team found a race.\n",
+        ],
+    );
+    // The clause is cut at its own first comma, not at the last comma the
+    // greedy pattern reached, so a later clause cannot lend it a finite verb.
+    assert_silent(
+        "SLOP-C004",
+        Profile::GeneralWriting,
+        &["While redistributing the Work thereof, You may choose to offer, and charge a fee for, acceptance of support.\n"],
+    );
+}
+
+/// One deny-list of words that end in -ing without being participles, declared
+/// once and read by both rules that ask the question. SLOP-C004's while drop
+/// is the second reader, so `While nothing changes` keeps firing.
+#[test]
+fn the_non_participle_ing_list_serves_both_rules() {
+    assert_fires(
+        "SLOP-C004",
+        Profile::GeneralWriting,
+        &[
+            "While nothing changes, the report still fires.\n",
+            "While everything compiles, the tests still fail.\n",
+        ],
+    );
+    // The same list keeps SLOP-C007's trailing tag off the same words.
+    assert_fires(
+        "SLOP-C007",
+        Profile::Doc,
+        &["It flags the shape, not everything.\n"],
+    );
+    assert_silent(
+        "SLOP-C007",
+        Profile::Doc,
+        &["She listened, never judging anyone.\n"],
+    );
+}
+
+/// A block boundary is a sentence boundary, and a stronger one, so the
+/// staged-agreement arm reads across it. What the boundary licenses is the
+/// match and never the span: the finding opens at the concession word.
+#[test]
+fn c004_reads_across_a_block_edge_and_opens_at_the_concession() {
+    let two_items =
+        "- Land the patch.\n- Granted, the parser is slower, but it handles nested spans.\n";
+    let report = run(two_items, Profile::GeneralWriting);
+    let spans: Vec<String> = report
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "SLOP-C004")
+        .map(|f| serde_json::from_str::<String>(f.snippet.get()).unwrap())
+        .collect();
+    assert_eq!(spans.len(), 1, "one concession, one finding: {spans:?}");
+    assert!(
+        spans[0].starts_with("Granted"),
+        "span opened before the concession word: {:?}",
+        spans[0]
+    );
+    assert!(!spans[0].contains('\n'), "span crossed a block edge");
+
+    // The same figure inside one block reports the same way, with the
+    // licensing period left out of the span.
+    let one_block = "It shipped early. Granted, the code is shorter, but it hides the cost.\n";
+    let report = run(one_block, Profile::GeneralWriting);
+    let span = report
+        .findings
+        .iter()
+        .find(|f| f.rule_id == "SLOP-C004")
+        .map(|f| serde_json::from_str::<String>(f.snippet.get()).unwrap())
+        .expect("C004 silent inside one block");
+    assert!(span.starts_with("Granted"), "span was {span:?}");
+}
+
+/// A concession opening a list item reports, and the two input formats now
+/// agree on it. Text mode strips the marker the way the markdown parser
+/// always did, so the same bytes give the same finding and the same span
+/// either way. Before the marker strip, text mode read `2. ` as prose and the
+/// digit-list-marker suppression kept the arm off it, which is the divergence
+/// this pins closed.
 #[test]
 fn c004_reads_list_markers_and_block_edges_correctly() {
     let marker = "2. Granted, the code is shorter, but it hides the cost.\n";
-    let mut text_cfg = Config::new(Profile::Essay);
+    let mut text_cfg = Config::new(Profile::GeneralWriting);
     text_cfg.input_format = unslop::InputFormat::Text;
-    let report = analyze(marker.as_bytes(), &text_cfg).unwrap();
-    assert!(
-        !report.findings.iter().any(|f| f.rule_id == "SLOP-C004"),
-        "a list marker opened a match: {:?}",
-        report
-            .findings
+    let as_text = analyze(marker.as_bytes(), &text_cfg).unwrap();
+    let as_markdown = run(marker, Profile::GeneralWriting);
+    let spans = |r: &unslop::Report| -> Vec<(usize, usize)> {
+        r.findings
             .iter()
-            .map(|f| f.rule_id.as_str())
-            .collect::<Vec<_>>()
+            .filter(|f| f.rule_id == "SLOP-C004")
+            .map(|f| (f.spans[0].start, f.spans[0].end))
+            .collect()
+    };
+    assert_eq!(spans(&as_text), vec![(3, 36)], "text mode");
+    assert_eq!(
+        spans(&as_text),
+        spans(&as_markdown),
+        "the two input formats must read a marker-led concession the same way"
     );
 
-    // Across two list items the boundary arm stays out, so no finding drags
-    // the previous item into its span.
+    // Across two list items the arm reads the boundary and reports, and no
+    // finding drags the previous item into its span.
     let two_items =
         "Steps.\n\n1. Ship it.\n2. Granted, the code is shorter, but it hides the cost.\n";
-    let report = run(two_items, Profile::Essay);
+    let report = run(two_items, Profile::GeneralWriting);
+    assert!(
+        report.findings.iter().any(|f| f.rule_id == "SLOP-C004"),
+        "the concession opening the second item went unreported"
+    );
     for f in report.findings.iter().filter(|f| f.rule_id == "SLOP-C004") {
         let snippet: String = serde_json::from_str(f.snippet.get()).unwrap();
         assert!(
@@ -852,7 +1269,7 @@ fn c004_reads_list_markers_and_block_edges_correctly() {
 fn a002_reads_the_past_tense() {
     assert_fires(
         "SLOP-A002",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "The team harnessed the momentum.\n",
             "They harnessed it well.\n",
@@ -863,7 +1280,7 @@ fn a002_reads_the_past_tense() {
     );
     assert_silent(
         "SLOP-A002",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             "A harnessed horse waited outside.\n",
             "The test harness ran overnight.\n",
@@ -879,7 +1296,7 @@ fn a002_reads_the_past_tense() {
 fn a002_leaves_participial_adjectives_alone() {
     assert_silent(
         "SLOP-A002",
-        Profile::Essay,
+        Profile::GeneralWriting,
         &[
             // Hyphen-joined compound modifier.
             "The ship crossed well-navigated waters.\n",
@@ -919,6 +1336,6 @@ fn a002_exemptions_cover_both_tenses() {
             "She navigated the DOM to find the node.\n",
         ),
     ] {
-        assert_silent("SLOP-A002", Profile::Essay, &[present, past]);
+        assert_silent("SLOP-A002", Profile::GeneralWriting, &[present, past]);
     }
 }

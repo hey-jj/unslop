@@ -43,7 +43,7 @@ pub fn evaluate(
     config: &Config,
     hits: &mut Vec<Hit>,
 ) {
-    let whole = 0..prepared.text.len().min(1);
+    let whole = crate::first_char_span(&prepared.text);
 
     for id in ["SLOP-D001", "SLOP-D004"] {
         let Some(idx) = super::active(cp, config, id) else {

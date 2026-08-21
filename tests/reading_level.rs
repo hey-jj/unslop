@@ -46,7 +46,7 @@ fn inflated_word_set_fires_on_the_curated_tells() {
         "The aforementioned flag controls both paths.",
         "We operationalize the checklist in CI.",
     ] {
-        let report = run(text, Profile::Essay);
+        let report = run(text, Profile::GeneralWriting);
         assert!(has_rule(&report, "SLOP-A004"), "missed: {text}");
     }
 }
@@ -71,7 +71,7 @@ fn plain_technical_prose_does_not_fire_inflated_diction() {
         // The verb sense of instrument.
         "We instrument the allocator to count peak usage.",
     ] {
-        let report = run(text, Profile::Essay);
+        let report = run(text, Profile::GeneralWriting);
         assert!(!has_rule(&report, "SLOP-A004"), "false positive on: {text}");
     }
 }
@@ -88,7 +88,7 @@ fn instrument_homographs_do_not_fire() {
         "The cello is a bowed string instrument.",
         "The instrumentation error path exits with code 30.",
     ] {
-        let report = run(text, Profile::Essay);
+        let report = run(text, Profile::GeneralWriting);
         assert!(!has_rule(&report, "SLOP-A004"), "false positive on: {text}");
     }
 }

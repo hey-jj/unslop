@@ -1,6 +1,6 @@
 ---
 name: unslop
-description: Cut AI tells from any writing. Must always apply. Use when drafting, editing, or reviewing an essay, a blog post, an email, a report, documentation, or a short post, and whenever the user mentions unslop, AI tells, slop, de-slopping, or making a draft sound human. Runs the unslop linter on the draft file with the matching profile, adjudicates the findings, revises the real ones, and re-runs until the check exits 0.
+description: Cut AI tells from any writing. Must always apply. Use when drafting, editing, or reviewing an essay, a blog post, an email, a report, documentation, a short post, or a thread comment, and whenever the user mentions unslop, AI tells, slop, de-slopping, or making a draft sound human. Runs the unslop linter on the draft file with the matching profile, adjudicates the findings, revises the real ones, and re-runs until the check exits 0.
 allowed-tools: Bash(unslop *)
 ---
 
@@ -49,24 +49,36 @@ One profile per run, always declared.
 
 | What you are writing | Profile |
 |---|---|
-| Essay, argued piece, column, personal writing | `essay` |
+| Essay, argued piece, column, personal writing | `general-writing` |
 | Blog post, newsletter, published article | `blog-post` |
 | Email, letter, message to a named person | `email` |
 | Report, findings, memo someone acts on | `report` |
 | Documentation, guide, reference, README | `doc` |
 | Short public post | `social-post` |
+| Thread reply, GitHub issue or review comment, social reply | `comment` |
 
-For anything unlisted, use `essay` and say that you did. Profiles differ in what they
-allow. They do not differ in how hard they look. `essay` and `blog-post` treat first person and
-opinion as content. `email` keeps the chat-assistant register blocking and turns off
-the courtesies a person extends to a person. `report` expects structure and lets
-verification language through. `doc` is the strictest plain-speech profile. `social-post`
-turns off length and structure and lets emoji and capitals through as candidates.
+For anything unlisted, use `general-writing` and say that you did. Profiles differ in
+what they allow. They do not differ in how hard they look. `general-writing` and
+`blog-post` treat first person and opinion as content. `email` keeps the
+chat-assistant register blocking and turns off the courtesies a person extends to a
+person. `report` expects structure and lets verification language through. `doc` is
+the strictest plain-speech profile. `social-post` turns off length and structure and
+lets emoji and capitals through as candidates.
+
+`comment` is stricter than `email` on the assistant register and softer on voice.
+A sycophantic opener, a turn-taking offer, a valediction, and a
+`let me know if you have any questions` all fire at full strength, because a thread
+already names who is speaking and everyone in it can reply. An emoji, capitals, a
+metaphor noun, and a line saying what you ran are judge questions instead.
+
+A comment is short, so the density rules that need a word count rarely reach their
+floor and everything the report gives you back is an individual span. Adjudicate each
+one on its own and never wait for a rate to confirm it.
 
 ## Running the check
 
 ```
-unslop check --profile essay --output text draft.md
+unslop check --profile general-writing --output text draft.md
 unslop check --profile email --output text - < message.txt
 ```
 
@@ -78,14 +90,18 @@ unslop check [--profile <P>] [--format <F>] [--suggest] [--waivers <FILE>]
 ```
 
 `--profile` is required and has no default. `--format` is the input format,
-`markdown` or `text`, and defaults to markdown. `--output` selects the report form,
+`markdown` or `text`, and defaults to markdown. Declare it to match the file.
+Running a markdown document with `--format text` reads fenced code, tables, and link
+targets as prose, which inflates the duplication and punctuation findings. `--output`
+selects the report form,
 `json` for machines and `text` for a person, and defaults to json. `--suggest` adds
 mechanical replacements to the result and never touches the input. `--config` loads
 deployment-owned TOML. `--max-bytes` overrides the 2 MiB input limit. The input is a
 path or `-` for stdin.
 
-`unslop --help` prints usage. `unslop check --help` is a usage error and exits 2.
-stdout carries the report and diagnostics go to stderr.
+`unslop --help` prints usage and exits 0, and `unslop check --help` prints the same
+usage and exits 0. Neither runs a check. stdout carries the report and diagnostics go
+to stderr.
 
 If the binary is missing, stop and say the gate could not run. Do not ship ungated and
 do not substitute your own reading for the check. Install with `cargo install unslop`.
@@ -151,7 +167,7 @@ and carries an RFC 3339 expiry.
 }
 ```
 
-Then run `unslop check --profile essay --waivers waivers.json draft.md`. A matching
+Then run `unslop check --profile general-writing --waivers waivers.json draft.md`. A matching
 authorized waiver marks the finding `waived: true` and drops it from the exit code.
 After any edit, re-run and ask the authority to confirm every waiver that covers
 changed bytes.
@@ -292,8 +308,11 @@ Read the entry before editing. Two patterns have no rule and are marked as such.
 20. **Chatbot phrases.** `I hope this helps!`, `Let me know if...`, `Of course!`,
     `Found the smoking gun!` Remove them. `SLOP-S003` for the closers, `SLOP-V002` for
     the register, `SLOP-V003` for the turn-taking offers. All three fire in email too.
-    The courtesies a person extends to a person are `SLOP-S005` and `SLOP-V006`, which
-    are off in email and fire everywhere else.
+    The courtesies a person extends to a person are `SLOP-S005` and `SLOP-V006`. Both
+    are off in email. `SLOP-V006` fires at full strength everywhere else, `comment`
+    included, because a thread is already the channel. `SLOP-S005` relaxes to a judge
+    question in `comment`, where thanking a maintainer for their time is real, and
+    fires at full strength in the rest.
 21. **Cutoff disclaimers.** `While specific details are limited...` Find the source or
     cut the sentence. `SLOP-V001`
 22. **Sycophantic tone.** `Great question! You're absolutely right!` Answer directly.
@@ -409,9 +428,9 @@ below belongs to it.
 - **Vary rhythm.** Short sentences. Then longer ones that take their time. Mix it up.
 - **Acknowledge complexity.** `Impressive but also kind of unsettling` beats
   `impressive`.
-- **Use `I` when it fits.** First person is not unprofessional. The `essay`,
-  `blog-post`, `email`, and `social-post` profiles turn the first-person rule off for
-  exactly this reason.
+- **Use `I` when it fits.** First person is not unprofessional. The `general-writing`,
+  `blog-post`, `email`, `social-post`, and `comment` profiles turn the first-person
+  rule off for exactly this reason.
 - **Let some mess in.** Perfect structure looks machine-made, and mess sits
   outside what any of these rules read.
 - **Be specific.** Not "this is concerning" but "there's something unsettling about

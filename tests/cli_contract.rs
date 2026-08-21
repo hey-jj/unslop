@@ -35,10 +35,54 @@ fn missing_profile_is_usage_error() {
     assert!(stderr.contains("--profile"));
 }
 
+/// essay was the old name for general-writing. There is no alias, so it is a
+/// usage error like any other unknown profile, and the one extra line says
+/// where the name went.
+#[test]
+fn the_old_profile_name_is_a_usage_error_with_a_hint() {
+    let (code, stdout, stderr) = run_stdin(&["check", "--profile", "essay", "-"], b"text");
+    assert_eq!(code, 2);
+    assert!(stdout.is_empty());
+    assert!(stderr.contains("unknown profile essay"), "{stderr}");
+    assert!(
+        stderr.contains("essay was renamed to general-writing in 0.1.3."),
+        "{stderr}"
+    );
+
+    // The hint reads the name case-insensitively, since a writer typing the
+    // old name capitalized has made the same mistake. Valid input stays
+    // lowercase, so every spelling here is still exit 2 and no alias exists.
+    for spelling in ["Essay", "ESSAY", "eSsAy"] {
+        let (code, stdout, stderr) = run_stdin(&["check", "--profile", spelling, "-"], b"text");
+        assert_eq!(code, 2, "{spelling}");
+        assert!(stdout.is_empty(), "{spelling}");
+        assert!(
+            stderr.contains("essay was renamed to general-writing in 0.1.3."),
+            "{spelling}: {stderr}"
+        );
+    }
+
+    // Any other unknown name gets the plain error and no hint.
+    let (code, _, stderr) = run_stdin(&["check", "--profile", "novella", "-"], b"text");
+    assert_eq!(code, 2);
+    assert!(stderr.contains("unknown profile novella"), "{stderr}");
+    assert!(!stderr.contains("renamed"), "{stderr}");
+
+    // The new name works, and comment is the seventh profile.
+    for name in ["general-writing", "comment"] {
+        let (code, _, stderr) = run_stdin(&["check", "--profile", name, "-"], b"A plain note.\n");
+        assert_eq!(code, 0, "{name}: {stderr}");
+    }
+    let (_, help, _) = run_stdin(&["--help"], b"");
+    assert!(help.contains("general-writing"), "{help}");
+    assert!(help.contains("comment"), "{help}");
+    assert!(!help.contains("essay"), "{help}");
+}
+
 #[test]
 fn clean_doc_exits_zero_with_pure_json_stdout() {
     let (code, stdout, _) = run_stdin(
-        &["check", "--profile", "essay", "-"],
+        &["check", "--profile", "general-writing", "-"],
         b"A plain note about the build.\n",
     );
     assert_eq!(code, 0);
@@ -50,7 +94,7 @@ fn clean_doc_exits_zero_with_pure_json_stdout() {
 #[test]
 fn violation_exits_10_candidate_exits_20() {
     let (code, stdout, _) = run_stdin(
-        &["check", "--profile", "essay", "-"],
+        &["check", "--profile", "general-writing", "-"],
         b"We delve into it.\n",
     );
     assert_eq!(code, 10);
@@ -58,7 +102,7 @@ fn violation_exits_10_candidate_exits_20() {
     assert_eq!(v["result_state"], "violations_present");
 
     let (code, stdout, _) = run_stdin(
-        &["check", "--profile", "essay", "-"],
+        &["check", "--profile", "general-writing", "-"],
         b"It fails rather than recovering.\n",
     );
     assert_eq!(code, 20, "stdout: {stdout}");
@@ -69,7 +113,7 @@ fn violation_exits_10_candidate_exits_20() {
 #[test]
 fn invalid_utf8_exits_40() {
     let (code, stdout, stderr) = run_stdin(
-        &["check", "--profile", "essay", "-"],
+        &["check", "--profile", "general-writing", "-"],
         &[0x66, 0x6F, 0xFF, 0xFE],
     );
     assert_eq!(code, 40);
@@ -81,7 +125,14 @@ fn invalid_utf8_exits_40() {
 #[test]
 fn over_limit_exits_40() {
     let (code, _, _) = run_stdin(
-        &["check", "--profile", "essay", "--max-bytes", "8", "-"],
+        &[
+            "check",
+            "--profile",
+            "general-writing",
+            "--max-bytes",
+            "8",
+            "-",
+        ],
         b"this is over eight bytes",
     );
     assert_eq!(code, 40);
@@ -98,7 +149,7 @@ fn verify_mismatch_exits_10() {
     let approval = serde_json::json!({
         "document_sha256": unslop::input::sha256_hex(clean),
         "policy_digest": unslop::policy_digest(),
-        "profile": "essay",
+        "profile": "general-writing",
         "waivers": [],
     });
     std::fs::write(&approval_path, approval.to_string()).unwrap();
@@ -137,7 +188,7 @@ fn incomplete_waiver_file_is_usage_error_complete_waiver_still_works() {
         &[
             "check",
             "--profile",
-            "essay",
+            "general-writing",
             "--waivers",
             incomplete_path.to_str().unwrap(),
             "-",
@@ -165,7 +216,7 @@ fn incomplete_waiver_file_is_usage_error_complete_waiver_still_works() {
         &[
             "check",
             "--profile",
-            "essay",
+            "general-writing",
             "--waivers",
             complete_path.to_str().unwrap(),
             "-",
@@ -201,7 +252,7 @@ fn an_unknown_format_is_a_usage_error() {
 #[test]
 fn suggest_only_annotates_mechanical_rules() {
     let (_, stdout, _) = run_stdin(
-        &["check", "--profile", "essay", "--suggest", "-"],
+        &["check", "--profile", "general-writing", "--suggest", "-"],
         b"A dash \xE2\x80\x94 here. We delve too.\n",
     );
     let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
@@ -222,12 +273,19 @@ fn suggest_only_annotates_mechanical_rules() {
 #[test]
 fn text_output_is_readable_and_keeps_the_exit_code() {
     let (code, stdout, _) = run_stdin(
-        &["check", "--profile", "essay", "--output", "text", "-"],
+        &[
+            "check",
+            "--profile",
+            "general-writing",
+            "--output",
+            "text",
+            "-",
+        ],
         b"We delve into the vibrant tapestry, ensuring nothing is left out.\n",
     );
     assert_eq!(code, 10, "violations still exit 10");
     assert!(stdout.starts_with("unslop "), "stdout: {stdout}");
-    assert!(stdout.contains("profile essay"));
+    assert!(stdout.contains("profile general-writing"));
     assert!(stdout.contains("result violations_present | exit 10"));
     assert!(stdout.contains("SLOP-A001"));
     assert!(stdout.contains("delve"), "the snippet is beside the span");
@@ -245,7 +303,14 @@ fn text_output_is_readable_and_keeps_the_exit_code() {
 #[test]
 fn a_clean_document_in_text_output_exits_zero() {
     let (code, stdout, _) = run_stdin(
-        &["check", "--profile", "essay", "--output", "text", "-"],
+        &[
+            "check",
+            "--profile",
+            "general-writing",
+            "--output",
+            "text",
+            "-",
+        ],
         b"The rain arrived late on Thursday and stayed for two days.\n",
     );
     assert_eq!(code, 0);
@@ -256,7 +321,14 @@ fn a_clean_document_in_text_output_exits_zero() {
 #[test]
 fn an_unknown_output_mode_is_a_usage_error() {
     let (code, _, stderr) = run_stdin(
-        &["check", "--profile", "essay", "--output", "yaml", "-"],
+        &[
+            "check",
+            "--profile",
+            "general-writing",
+            "--output",
+            "yaml",
+            "-",
+        ],
         b"Plain.\n",
     );
     assert_eq!(code, 2);

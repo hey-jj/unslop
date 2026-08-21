@@ -67,7 +67,7 @@ fn specimen_two_fires_the_leak_and_the_and_not_spelling() {
     assert_eq!(c007, vec!["and not from"]);
 }
 
-/// Both rules apply in all six profiles.
+/// Both rules apply in every profile.
 #[test]
 fn both_rules_apply_in_every_profile() {
     for profile in Profile::ALL {
@@ -381,7 +381,7 @@ fn the_skill_colon_entry_stays_silent() {
 /// One negation carrying a runtime fact is not a stack, in any register.
 #[test]
 fn an_honest_runtime_contract_stays_silent() {
-    for profile in [Profile::Essay, Profile::Report, Profile::Doc] {
+    for profile in [Profile::GeneralWriting, Profile::Report, Profile::Doc] {
         let text = "The check does not follow symlinks. Pass the resolved path instead.\n";
         let report = run(text, profile);
         assert_invariants(text, &report);
@@ -402,7 +402,7 @@ fn the_leak_anchor_is_the_tool_noun_alone() {
         "That was deliberately vague.\n",
         "I did it deliberately, at the cost of a friendship.\n",
     ] {
-        let report = run(text, Profile::Essay);
+        let report = run(text, Profile::GeneralWriting);
         assert_invariants(text, &report);
         assert!(
             !has_rule(&report, "SLOP-F005"),
@@ -410,7 +410,7 @@ fn the_leak_anchor_is_the_tool_noun_alone() {
         );
     }
     let anchored = "The rule fires deliberately when the span is short.\n";
-    let report = run(anchored, Profile::Essay);
+    let report = run(anchored, Profile::GeneralWriting);
     assert_invariants(anchored, &report);
     assert!(has_rule(&report, "SLOP-F005"));
 }
@@ -671,7 +671,7 @@ fn a_foreign_subject_hedge_counts_only_toward_a_stack() {
 /// the closed-set test reads the head noun, which is the last token the star
 /// covered.
 #[test]
-fn the_starred_hedges_read_a_two_token_noun_phrase() {
+fn the_starred_hedges_read_a_three_token_noun_phrase() {
     // The evasion the widening closes: a quantifier in front of the noun.
     let fires = "It reads text. No single finding is evidence of intent.\n";
     let report = run(fires, Profile::Doc);
@@ -705,6 +705,85 @@ fn the_starred_hedges_read_a_two_token_noun_phrase() {
             .count(),
         2
     );
+
+    // A third token covers the stacked determiner, and the head-noun test is
+    // unchanged: it still reads the last token the star covered.
+    let three = "It reads text. No one single finding is evidence of anything.\n";
+    let report = run(three, Profile::Doc);
+    assert_invariants(three, &report);
+    let f = report
+        .findings
+        .iter()
+        .find(|f| f.rule_id == "SLOP-C011")
+        .expect("the three-token phrase went unread");
+    assert!(f.message.contains("arm B"), "{}", f.message);
+    let sample = "It reads text. No one single sample is evidence of stress.\n";
+    let report = run(sample, Profile::Doc);
+    assert_invariants(sample, &report);
+    assert!(
+        !has_rule(&report, "SLOP-C011"),
+        "sample is not a tool noun and the head-noun test must still fail it"
+    );
+    // One and two tokens read as they did.
+    for text in [
+        "It reads text. No finding is evidence of anything.\n",
+        "It reads text. No single finding is evidence of anything.\n",
+    ] {
+        let report = run(text, Profile::Doc);
+        assert_invariants(text, &report);
+        assert!(has_rule(&report, "SLOP-C011"), "{text:?}");
+    }
+}
+
+/// Spelling D. An `and`-led segment denying a capability in the base form has
+/// the shape of a command, and the subject standing in an earlier segment of
+/// the same sentence is what tells the two apart. The denial qualifies on the
+/// absent-subject key and reports the coordinator-cut segment.
+#[test]
+fn an_and_led_segment_continues_the_subject_before_it() {
+    for text in [
+        "The rules read text and never detect authorship.\n",
+        "The rules read text and do not detect authorship.\n",
+        "The rules are advisory and do not replace review.\n",
+    ] {
+        let report = run(text, Profile::Doc);
+        assert_invariants(text, &report);
+        let found: Vec<&unslop::Finding> = report
+            .findings
+            .iter()
+            .filter(|f| f.rule_id == "SLOP-C011")
+            .collect();
+        assert_eq!(found.len(), 1, "{text:?}: {:?}", common::rule_ids(&report));
+        assert!(found[0].message.contains("arm B"), "{}", found[0].message);
+        let span = snippet(found[0]);
+        assert!(
+            !span.starts_with("and") && !span.starts_with("The"),
+            "the span is the coordinator-cut segment, got {span:?}"
+        );
+        assert!(span.ends_with(|c: char| c.is_alphanumeric()), "{span:?}");
+    }
+
+    // No subject to continue, or a junction that licenses a real imperative.
+    for text in [
+        "Never detect authorship.\n",
+        "The tool is fast, but never replace review with it.\n",
+        "The findings are noisy, so do not judge them.\n",
+        "The report is evidence, do not replace your own reading with it.\n",
+        "Read the report and never judge by one finding.\n",
+        // The antecedent has to sit in the same sentence.
+        "The rules read text. Never score voice.\n",
+    ] {
+        let report = run(text, Profile::Doc);
+        assert_invariants(text, &report);
+        assert!(!has_rule(&report, "SLOP-C011"), "{text:?}");
+    }
+
+    // The recorded judge-absorbed shape. It meets every condition, and most
+    // writers would have reached for but.
+    let absorbed = "The tool is fast, and never replace review with it.\n";
+    let report = run(absorbed, Profile::Doc);
+    assert_invariants(absorbed, &report);
+    assert!(has_rule(&report, "SLOP-C011"));
 }
 
 /// D11: the complete coreference rule, and the miss it accepts. A product

@@ -95,6 +95,9 @@ pub const ENGINE_RULES: &[&str] = &[
 /// only.
 pub fn implemented_param_keys() -> &'static [(&'static str, &'static str)] {
     &[
+        // V002: the anchored subset of the assistant-voice lexicon, applied in
+        // engine::accept_word_hit beside the whole-rule block-start position.
+        ("SLOP-V002", "block_start_only"),
         ("SLOP-M005", "unclosed_fence"),
         ("SLOP-M005", "raw_html_dominance_pct"),
         ("SLOP-M005", "raw_html_dominance_floor_bytes"),

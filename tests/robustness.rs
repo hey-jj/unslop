@@ -50,7 +50,7 @@ fn fill_to(base: &str, unit: &str, bytes: usize) -> String {
 }
 
 fn timed_analyze(input: &str) -> (Result<unslop::Report, AnalysisError>, Duration) {
-    let config = Config::new(Profile::Essay);
+    let config = Config::new(Profile::GeneralWriting);
     let start = Instant::now();
     let out = analyze(input.as_bytes(), &config);
     (out, start.elapsed())
@@ -167,7 +167,7 @@ fn closed_stdout_never_panics_on_any_output_path() {
         serde_json::json!({
             "document_sha256": unslop::input::sha256_hex(clean),
             "policy_digest": unslop::policy_digest(),
-            "profile": "essay",
+            "profile": "general-writing",
             "waivers": [],
         })
         .to_string(),
@@ -179,15 +179,23 @@ fn closed_stdout_never_panics_on_any_output_path() {
     let cases: Vec<(Vec<&str>, &[u8], i32)> = vec![
         (vec!["--version"], b"", 0),
         // Success report path.
-        (vec!["check", "--profile", "essay", "-"], b"Plain.\n", 0),
+        (
+            vec!["check", "--profile", "general-writing", "-"],
+            b"Plain.\n",
+            0,
+        ),
         // instrumentation_error JSON path (findings cap).
         (
-            vec!["check", "--profile", "essay", "-"],
+            vec!["check", "--profile", "general-writing", "-"],
             over_cap.as_bytes(),
             30,
         ),
         // unsupported_input JSON path.
-        (vec!["check", "--profile", "essay", "-"], &[0x66, 0xFF], 40),
+        (
+            vec!["check", "--profile", "general-writing", "-"],
+            &[0x66, 0xFF],
+            40,
+        ),
         // verify verdicts, both ways.
         (vec!["verify", "--approval", approval, "-"], clean, 0),
         (vec!["verify", "--approval", approval, "-"], b"mutated", 10),
@@ -210,7 +218,7 @@ fn report_into_early_closing_pipe_keeps_exit_code() {
     let input = "We delve. ".repeat(5_000);
     let mut child = Command::new("bash")
         .arg("-c")
-        .arg(r#""$0" check --profile essay - | head -c 1 >/dev/null; exit "${PIPESTATUS[0]}""#)
+        .arg(r#""$0" check --profile general-writing - | head -c 1 >/dev/null; exit "${PIPESTATUS[0]}""#)
         .arg(bin())
         .stdin(Stdio::piped())
         .stderr(Stdio::piped())
@@ -234,7 +242,10 @@ fn report_into_early_closing_pipe_keeps_exit_code() {
 
 #[test]
 fn second_positional_is_usage_error() {
-    let (code, stdout, stderr) = run_stdin(&["check", "--profile", "essay", "a.md", "b.md"], b"");
+    let (code, stdout, stderr) = run_stdin(
+        &["check", "--profile", "general-writing", "a.md", "b.md"],
+        b"",
+    );
     assert_eq!(code, 2, "stderr: {stderr}");
     assert!(stdout.is_empty());
     assert!(stderr.contains("second path"), "stderr: {stderr}");
@@ -264,7 +275,7 @@ fn wrong_type_config_value_is_usage_error() {
             &[
                 "check",
                 "--profile",
-                "essay",
+                "general-writing",
                 "--config",
                 p.to_str().unwrap(),
                 "-",
@@ -282,7 +293,7 @@ fn wrong_type_config_value_is_usage_error() {
         &[
             "check",
             "--profile",
-            "essay",
+            "general-writing",
             "--config",
             p.to_str().unwrap(),
             "-",
@@ -319,7 +330,7 @@ fn help_prints_usage_to_stdout() {
         "exit codes",
         "-V",
         "-h",
-        "essay",
+        "general-writing",
         "markdown",
     ] {
         assert!(stdout.contains(needle), "usage lacks {needle}: {stdout}");

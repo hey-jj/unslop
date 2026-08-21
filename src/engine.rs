@@ -390,6 +390,108 @@ fn participial_adjective(hay: &str, span: &Range<usize>) -> bool {
     DETERMINERS.contains(&prev.as_str()) || (prev.len() > 3 && prev.ends_with("ly"))
 }
 
+/// The `while` clause itself, which is what both temporal tests read. The
+/// pattern closes on a comma, but it is greedy inside its 160-byte bound, so
+/// the match can run past the clause and take in whatever follows: a license
+/// line reading while redistributing the Work thereof, You may choose to
+/// offer, and charge a fee for, matches out to the third comma. A while clause
+/// ends at its own first comma, so the cut is there, and neither test sees a
+/// verb belonging to the sentence the clause is attached to. `matched` opens
+/// on `while`, which the caller has established, so the five bytes come off
+/// without a boundary check.
+fn while_clause(matched: &str) -> &str {
+    let after = matched.trim_start()[5..].trim_start();
+    match after.find(',') {
+        Some(at) => &after[..at],
+        None => after,
+    }
+}
+
+/// Lowercased word tokens of a clause, punctuation trimmed off each edge.
+fn clause_words(clause: &str) -> Vec<String> {
+    clause
+        .split_whitespace()
+        .map(|w| {
+            w.trim_matches(|c: char| !c.is_alphanumeric())
+                .to_ascii_lowercase()
+        })
+        .collect()
+}
+
+/// A form of `be` followed by an `-ing` word, which is the progressive that
+/// marks a temporal `while` clause in SLOP-C004. One adverb may stand between
+/// the two, which is where a writer puts `still` or `already`. The gap is
+/// capped at a single token as a correctness boundary: two tokens starts
+/// admitting a noun phrase between the copula and an unrelated participle,
+/// and the pair stops being a verb group.
+fn carries_progressive(clause: &str) -> bool {
+    const BE: &[&str] = &["am", "is", "are", "was", "were", "be", "being"];
+    // The adverbs that were measured in the gap, plus the ones that belong
+    // beside them by analogy. Any -ly word qualifies without being listed.
+    const SKIPPABLE: &[&str] = &[
+        "still",
+        "already",
+        "yet",
+        "now",
+        "just",
+        "also",
+        "again",
+        "always",
+        "currently",
+        "never",
+    ];
+    let words = clause_words(clause);
+    let ing = |w: &String| w.len() > 3 && w.ends_with("ing");
+    let adverb = |w: &String| w.ends_with("ly") || SKIPPABLE.contains(&w.as_str());
+    words.iter().enumerate().any(|(i, w)| {
+        BE.contains(&w.as_str())
+            && (words.get(i + 1).is_some_and(ing)
+                || (words.get(i + 1).is_some_and(adverb) && words.get(i + 2).is_some_and(ing)))
+    })
+}
+
+/// Finite verb forms that cannot head a participial adjunct. A `while` clause
+/// carrying any of them is a full clause with a subject, so whatever the -ing
+/// word is doing there, it is not heading a participle. The set is closed and
+/// matched whole, with no morphological scan behind it: an -s scan reads every
+/// plural noun as a verb, and an -ed scan reads every participial adjective as
+/// one, and both were measured wrong. `be`, `been`, and `being` are left out
+/// deliberately, since a line saying while being tested is participial and has
+/// to keep dropping.
+const FINITE_FORMS: &[&str] = &[
+    "am", "is", "are", "was", "were", "has", "have", "had", "do", "does", "did", "can", "could",
+    "will", "would", "shall", "should", "may", "might", "must",
+];
+
+/// A `while` clause whose very next word is a participle heading the clause,
+/// which is the second temporal shape SLOP-C004 drops. Three things have to
+/// hold. The word after the keyword reads as a participle, on the shared test
+/// that also keeps nothing and everything out. It is not one of the concession
+/// verbs, because a temporal while-participle runs on an activity and a
+/// concessive one runs on cognition. And the clause carries no finite verb,
+/// which is what separates a participial adjunct from a full clause whose
+/// subject merely opens with an -ing word, as in a line saying while
+/// programming language parsers are written manually.
+fn participial_while(clause: &str) -> bool {
+    const CONCESSION: &[&str] = &[
+        "acknowledging",
+        "recognizing",
+        "granting",
+        "accepting",
+        "conceding",
+        "admitting",
+        "noting",
+        "allowing",
+    ];
+    let word = crate::rules::contrast::leading_word(clause);
+    if !crate::rules::contrast::reads_as_participle(&word) || CONCESSION.contains(&word.as_str()) {
+        return false;
+    }
+    !clause_words(clause)
+        .iter()
+        .any(|w| FINITE_FORMS.contains(&w.as_str()))
+}
+
 fn cjk_present(s: &str) -> bool {
     s.chars().any(|c| {
         let u = c as u32;
@@ -708,6 +810,29 @@ fn accept_word_hit(
             }
         }
     }
+    // A rule may anchor part of its lexicon rather than all of it. The entries
+    // named in match.params.block_start_only fire only where they open a
+    // sentence, a line, or a list item; the rest of the same lexicon is
+    // unanchored. Reading the list per hit costs nothing measurable, since
+    // only a matched span reaches here.
+    if let Some(anchored) = rule
+        .params
+        .as_table()
+        .and_then(|t| t.get("block_start_only"))
+        .and_then(|v| v.as_array())
+    {
+        let matched = hay[span.clone()].to_lowercase();
+        if anchored
+            .iter()
+            .filter_map(|v| v.as_str())
+            .any(|e| e == matched)
+        {
+            match norm {
+                Some(n) if n.is_block_start(span.start) => {}
+                _ => return,
+            }
+        }
+    }
     // The filler rule's "overall" entry fires only at block start.
     if rule.id == "SLOP-T001" {
         let matched = hay[span.clone()].to_ascii_lowercase();
@@ -943,6 +1068,22 @@ fn scan_rx(
                 }
             }
             "SLOP-C004" => {
+                // The line-start arm splits by word. `although` and `though`
+                // have no temporal reading. `while` has two, and two shapes
+                // mark the temporal one: a progressive in the clause before
+                // the comma, and a participle standing directly after the
+                // keyword. Match, then filter, the P6 precedent.
+                let matched = &hay[span.clone()];
+                let opens_on_while = matched
+                    .trim_start()
+                    .get(..5)
+                    .is_some_and(|w| w.eq_ignore_ascii_case("while"));
+                if opens_on_while {
+                    let clause = while_clause(matched);
+                    if carries_progressive(clause) || participial_while(clause) {
+                        continue;
+                    }
+                }
                 // The staged-agreement arm consumes its sentence boundary, so
                 // its span opens on the punctuation. The line-start arm never
                 // does, and this leaves it alone.
@@ -974,17 +1115,20 @@ fn scan_rx(
                     {
                         continue;
                     }
-                    // The boundary has to sit inside one block. A newline in
-                    // the whitespace it consumed means the match reaches from
-                    // the end of one block into the next, where the
-                    // line-start arm already reads the opening and reports it
-                    // without dragging the previous block into the span.
-                    if hay[span.clone()]
+                    // The boundary licenses the match. It is never part of
+                    // what the writer edits, so the span reopens at the
+                    // concession word. A block edge is a sentence boundary and
+                    // a stronger one than a period, so the arm reads across it
+                    // and this same cut keeps the previous block out of the
+                    // reported span.
+                    let mark = first.map(char::len_utf8).unwrap_or(1);
+                    let gap: usize = hay[span.start + mark..span.end]
                         .chars()
-                        .skip(1)
                         .take_while(|c| c.is_whitespace())
-                        .any(|c| c == '\n')
-                    {
+                        .map(char::len_utf8)
+                        .sum();
+                    span.start += mark + gap;
+                    if span.start >= span.end {
                         continue;
                     }
                 }

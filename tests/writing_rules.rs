@@ -25,7 +25,7 @@ fn every_dash_substitution_fires() {
         "The report--long as it was--landed.\n",
         "The plan - such as it was - held.\n",
     ] {
-        let report = run(text, Profile::Essay);
+        let report = run(text, Profile::GeneralWriting);
         assert!(
             has_rule(&report, "SLOP-M001"),
             "M001 missed a dash substitution in {text:?}"
@@ -41,7 +41,7 @@ fn numeric_ranges_and_hyphenated_words_are_silent() {
         "The well-known result holds.\n",
         "She wrote a first-person account.\n",
     ] {
-        let report = run(text, Profile::Essay);
+        let report = run(text, Profile::GeneralWriting);
         assert!(
             !has_rule(&report, "SLOP-M001"),
             "M001 fired on legitimate punctuation in {text:?}"
@@ -52,7 +52,7 @@ fn numeric_ranges_and_hyphenated_words_are_silent() {
 #[test]
 fn the_dash_suggestion_puts_back_the_letters_it_consumed() {
     let text = "The plan - such as it was - held. A dash — here.\n";
-    let mut config = Config::new(Profile::Essay);
+    let mut config = Config::new(Profile::GeneralWriting);
     config.suggest = true;
     let report = analyze(text.as_bytes(), &config).unwrap();
     let fixes: Vec<(String, String)> = report
@@ -90,7 +90,7 @@ fn semicolons_block_in_doc_report_to_a_writer_and_are_off_elsewhere() {
     // Everywhere else a semicolon is a writer's choice, not a generation
     // signal, so the rule says nothing at all.
     for profile in [
-        Profile::Essay,
+        Profile::GeneralWriting,
         Profile::BlogPost,
         Profile::Email,
         Profile::SocialPost,
@@ -111,9 +111,9 @@ fn semicolons_block_in_doc_report_to_a_writer_and_are_off_elsewhere() {
 fn a_two_semicolon_draft_ships_from_a_voice_profile() {
     let text = "The plan is simple; the work is not. She left early; nobody minded.\n";
 
-    let essay = run(text, Profile::Essay);
-    assert_eq!(essay.result_state, "no_findings");
-    assert_eq!(essay.exit_code(), 0);
+    let general = run(text, Profile::GeneralWriting);
+    assert_eq!(general.result_state, "no_findings");
+    assert_eq!(general.exit_code(), 0);
 
     let report = run(text, Profile::Report);
     assert_eq!(
@@ -137,7 +137,7 @@ fn a_two_semicolon_draft_ships_from_a_voice_profile() {
 fn process_narration_fires_where_plain_first_person_does_not() {
     let narrated = "I ran the numbers twice before writing this.\n";
     for profile in [
-        Profile::Essay,
+        Profile::GeneralWriting,
         Profile::BlogPost,
         Profile::Email,
         Profile::SocialPost,
@@ -159,7 +159,11 @@ fn process_narration_fires_where_plain_first_person_does_not() {
 #[test]
 fn plain_first_person_is_content_in_the_voice_profiles() {
     let text = "I grew up two streets from the river.\n";
-    for profile in [Profile::Essay, Profile::BlogPost, Profile::SocialPost] {
+    for profile in [
+        Profile::GeneralWriting,
+        Profile::BlogPost,
+        Profile::SocialPost,
+    ] {
         let report = run(text, profile);
         assert!(
             !has_rule(&report, "SLOP-F001") && !has_rule(&report, "SLOP-F004"),
@@ -176,7 +180,7 @@ fn present_tense_first_person_is_not_process_narration() {
         "I run three miles most mornings.\n",
         "We check the mail on Fridays.\n",
     ] {
-        let report = run(text, Profile::Essay);
+        let report = run(text, Profile::GeneralWriting);
         assert!(
             !has_rule(&report, "SLOP-F004"),
             "F004 fired on present tense in {text:?}"
@@ -191,7 +195,7 @@ fn perfect_and_contracted_forms_fire() {
         "I've checked the totals twice.\n",
         "We had tested the claim before publishing.\n",
     ] {
-        let report = run(text, Profile::Essay);
+        let report = run(text, Profile::GeneralWriting);
         assert!(has_rule(&report, "SLOP-F004"), "F004 missed {text:?}");
     }
 }

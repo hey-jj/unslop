@@ -155,6 +155,37 @@ pub(crate) fn period_is_terminal(text: &str, dot_end: usize) -> bool {
 /// Both whitespace loops match ASCII whitespace only (space/tab/LF/CR),
 /// by design: a non-ASCII space inside a contrastive tail is an
 /// attacker-unrealistic vector (see KNOWN-EDGES).
+/// Words that end in -ing without being participles. Declared once and read
+/// by both rules that ask the question: the apophatic tail parser below, and
+/// SLOP-C004's participial `while` drop in the engine. Two copies of a closed
+/// set drift, one does not, which is the same reason the tool nouns live in
+/// one place.
+pub(crate) const NON_PARTICIPLE_ING: &[&str] =
+    &["nothing", "anything", "something", "everything", "during"];
+
+/// True when `word` reads as a participle. The length floor is the one
+/// `verb_form` uses, so a four-letter word ending in -ing (king, ring, thing)
+/// never qualifies, and the shared deny-list holds the longer words that end
+/// the same way without being one.
+pub(crate) fn reads_as_participle(word: &str) -> bool {
+    word.len() > 4 && word.ends_with("ing") && !NON_PARTICIPLE_ING.contains(&word)
+}
+
+/// The first word of `s`, lowercased, taken from the leading run of word
+/// characters.
+pub(crate) fn leading_word(s: &str) -> String {
+    s.chars()
+        .take_while(|c| c.is_alphanumeric() || *c == '\'' || *c == '-')
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+/// True when `after_negation` opens directly on an -ing word that reads as a
+/// participle.
+fn participial_adjunct(after_negation: &str) -> bool {
+    reads_as_participle(&leading_word(after_negation))
+}
+
 fn parse_tail(text: &str, comma: usize, np_max: usize) -> Option<usize> {
     let rest = text.get(comma + 1..)?;
     let mut i = 0usize;
@@ -196,6 +227,19 @@ fn parse_tail(text: &str, comma: usize, np_max: usize) -> Option<usize> {
         }
     }
     if ws == 0 {
+        return None;
+    }
+    // A participial adjunct is not a noun phrase. Where the negation runs
+    // straight into an -ing word with no determiner between them, the tail
+    // says how someone did something ("never judging anyone", "not making a
+    // fuss"), which is a manner clause and not the apophatic caveat this
+    // trigger reads. A determiner in between marks a genuine noun ("not the
+    // beginning"), so the test is adjacency and nothing else. Five words end
+    // in -ing without being participles and are denied: the four quantifier
+    // pronouns, plus during, which is denied so the participle test stays
+    // correct rather than to settle whether a tail like "not during matching"
+    // should fire, a separate question about this trigger's scope.
+    if participial_adjunct(&rest[j..]) {
         return None;
     }
     // NP scan: bounded, no clause punctuation, must close with a terminal,
@@ -514,10 +558,13 @@ pub(crate) fn phrase_at(toks: &[(usize, &str)], i: usize, phrase: &[String]) -> 
         .all(|(k, w)| toks.get(i + k).is_some_and(|t| &bare(t.1) == w))
 }
 
-/// How many tokens a `*` may stand for. Two covers the noun phrases a writer
-/// puts under a quantifier, as in no single finding. A three-token phrase is
-/// a recorded miss, not a widening.
-const WILDCARD_MAX_TOKENS: usize = 2;
+/// How many tokens a `*` may stand for. Three covers the noun phrases a writer
+/// puts under a quantifier, up to a stacked determiner ("no one single
+/// finding"). Three is also where it stops, and the reason is correctness
+/// rather than appetite: a fourth token admits an of-phrase, so "no finding in
+/// the report is evidence" would seat the head noun on report and the
+/// closed-set subject test would run against the wrong word.
+const WILDCARD_MAX_TOKENS: usize = 3;
 
 /// Match `phrase` at `i`, where a `*` stands for one or two tokens. Returns
 /// the index of the last token the wildcard covered, which is the head noun
@@ -630,6 +677,35 @@ fn is_imperative(toks: &[(usize, &str)], head: usize, terms: &DenialTerms) -> bo
         return false;
     };
     governed_verb(toks, head + neg.len() - 1).is_some_and(|w| is_base_form(&w))
+}
+
+/// The fourth family-1 shape, read per segment and decided per sentence. A
+/// segment that opens on `and` and then denies a capability in the base form
+/// looks exactly like a command, and the imperative test excludes it on that
+/// reading. What tells the two apart is what the writer already said in the
+/// same sentence: after a clause with a subject of its own, `and never detect
+/// authorship` continues that subject and denies, while `Read the report and
+/// never judge by one finding` continues an instruction and instructs. This
+/// half is the shape test and stays pure. The subject beside it is the other
+/// half and belongs to the caller, which is the only place the sentence is in
+/// view. `and` alone opens the shape: a comma, a `but`, or a `so` in that seat
+/// licenses a real imperative, so those spellings stay silent.
+fn and_led_denial(toks: &[(usize, &str)], head: usize, terms: &DenialTerms) -> bool {
+    if head == 0 || bare(toks[0].1) != "and" {
+        return false;
+    }
+    let Some(neg) = terms
+        .imperative_negations
+        .iter()
+        .find(|n| phrase_at(toks, head, n))
+    else {
+        return false;
+    };
+    let from = head + neg.len();
+    (from..from + terms.verb_window).any(|i| {
+        toks.get(i)
+            .is_some_and(|t| terms.verbs_base.contains(&bare(t.1)))
+    })
 }
 
 /// A positive clause subject, returning the tokens it spans: a pronoun, a
@@ -778,6 +854,12 @@ struct ClauseFacts {
     /// True when the denial left its subject out and borrows the one beside
     /// it, which is what settles its coreference.
     elided_subject: bool,
+    /// The segment carries a subject from the closed set. The per-sentence
+    /// pass reads this on the segments before an `and`-led shape.
+    closed_subject: bool,
+    /// The `and`-led shape matched here, waiting on the sentence for its
+    /// subject.
+    and_led: bool,
     /// An affirmative self-description that can complete the single-clause
     /// trigger: a closed-set subject, no negation, no denial of its own. The
     /// degenerate restatement (`It reads text.`) is its narrowest case.
@@ -828,6 +910,8 @@ fn clause_facts(
         denied_capability: capability,
         arm_b_eligible: capability || closed_subject,
         elided_subject: spelling == Some(Spelling::Elided),
+        closed_subject,
+        and_led: !capability && and_led_denial(&toks, head, terms),
         // An affirmative partner carries a subject and no negation at all, so
         // a second denial in the same sentence can never stand in for one.
         partner: subject.is_some() && !negated && !capability && hedge.is_none(),
@@ -909,7 +993,7 @@ fn capability_denial(
 
     for block in blocks(norm) {
         // One segmentation pass serves every test in the rule.
-        let per_sentence: Vec<Vec<ClauseFacts>> = sentences(text, &block)
+        let mut per_sentence: Vec<Vec<ClauseFacts>> = sentences(text, &block)
             .iter()
             .map(|sentence| {
                 clause_ranges(text, sentence, &terms)
@@ -924,6 +1008,24 @@ fn capability_denial(
                     .collect()
             })
             .collect();
+        // The `and`-led shape needs the sentence, not the segment, so it is
+        // settled here. A subject standing in an earlier segment of the same
+        // sentence is the one the denial continues, and the denial qualifies
+        // on the absent-subject key: it has no subject of its own, so there is
+        // nothing to test and the partner beside it is available by
+        // definition.
+        for segments in per_sentence.iter_mut() {
+            let mut subject_seen = false;
+            for facts in segments.iter_mut() {
+                if facts.and_led && subject_seen {
+                    facts.qualifying = true;
+                    facts.denied_capability = true;
+                    facts.elided_subject = true;
+                    facts.arm_b_eligible = true;
+                }
+                subject_seen |= facts.closed_subject;
+            }
+        }
         let qualifying: Vec<(usize, usize)> = per_sentence
             .iter()
             .enumerate()

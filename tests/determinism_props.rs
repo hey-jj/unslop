@@ -43,7 +43,7 @@ proptest! {
     // reported span does not render back to the trigger the pattern matched.
     #[test]
     fn r7_never_false_trips_a_real_finding(text in "\\PC{0,400}") {
-        for profile in [Profile::Doc, Profile::Doc, Profile::Essay] {
+        for profile in [Profile::Doc, Profile::Doc, Profile::GeneralWriting] {
             let config = Config::new(profile);
             if let Err(e) = analyze(text.as_bytes(), &config) {
                 prop_assert!(
@@ -56,7 +56,7 @@ proptest! {
 
     #[test]
     fn analysis_is_deterministic_on_random_text(text in "\\PC{0,300}") {
-        let config = Config::new(Profile::Essay);
+        let config = Config::new(Profile::GeneralWriting);
         let a = analyze(text.as_bytes(), &config).map(|r| serde_json::to_string(&r).unwrap());
         let b = analyze(text.as_bytes(), &config).map(|r| serde_json::to_string(&r).unwrap());
         match (a, b) {

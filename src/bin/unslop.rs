@@ -85,10 +85,13 @@ fn usage() -> &'static str {
      (default 2 MiB) is rejected as unsupported.\n\
      \n\
      profiles (--profile, required, no default):\n  \
-     essay, blog-post, email, report, doc, social-post\n\
+     general-writing, blog-post, email, report, doc, social-post, comment\n\
      \n\
      formats (--format, the INPUT format, defaults to markdown):\n  \
-     markdown, text\n\
+     markdown, text\n  \
+     Match the flag to the file. A markdown document read as text puts\n  \
+     fenced code, tables, and link targets through the rules as prose,\n  \
+     which inflates the duplication and punctuation findings.\n\
      \n\
      output (--output, defaults to json):\n  \
      json for machines, text for a person\n\
@@ -193,6 +196,9 @@ fn cmd_check(mut parser: lexopt::Parser) -> Result<u8, lexopt::Error> {
     };
     let Some(profile) = Profile::from_str(&profile_name) else {
         eprintln!("unslop: unknown profile {profile_name}");
+        if profile_name.eq_ignore_ascii_case("essay") {
+            eprintln!("essay was renamed to general-writing in 0.1.3.");
+        }
         return Ok(EXIT_USAGE);
     };
 

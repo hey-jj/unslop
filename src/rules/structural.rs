@@ -50,7 +50,7 @@ pub fn evaluate(
             .and_then(|v| v.as_integer());
         if let Some(cap) = cap {
             if doc.stats.word_count > cap as u64 {
-                hits.push(Hit::new(idx, 0..prepared.text.len().min(1)));
+                hits.push(Hit::new(idx, crate::first_char_span(&prepared.text)));
             }
         }
     }

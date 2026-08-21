@@ -1,10 +1,16 @@
 # SLOP-V002 assistant conversational register. Candidate tier.
+# The eight praise entries listed under match.params.block_start_only fire
+# only where they open a sentence, a line, or a list item, which is where
+# performed agreement lives. Every other entry here fires wherever it appears.
 you're absolutely right
 you are absolutely right
 great question
 good question
-great catch
-good catch
+excellent question
+that's a great question
+great point
+excellent point
+fair hit
 certainly!
 of course!
 absolutely!

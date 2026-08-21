@@ -1520,6 +1520,39 @@ fn find_ci_ascii(hay: &str, needle: &[u8]) -> Option<usize> {
     (0..=hb.len() - m).find(|&j| hb[j..j + m].eq_ignore_ascii_case(needle))
 }
 
+/// Byte length of the list, quote, or heading marker opening `line`, counting
+/// the whitespace on either side of it, or zero when the line opens on content.
+/// Markdown mode has a parser that strips these and text mode has none, so a
+/// marker-led line used to carry its marker into the prose range and every rule
+/// anchored to a block start read the position after the marker rather than the
+/// position a reader sees. A marker with no space after it is ordinary text, so
+/// a horizontal rule, a negative number, and a hashtag all score zero here.
+/// The bullet glyphs come from `views::BULLET_MARKERS`, the fleet-wide set
+/// this shares with the block-start decoration table.
+fn marker_run_len(line: &str) -> usize {
+    let lead = line.len() - line.trim_start().len();
+    let rest = &line[lead..];
+    let marker = match rest.chars().next() {
+        Some(c) if crate::views::BULLET_MARKERS.contains(&c) => c.len_utf8(),
+        Some(c @ ('-' | '*' | '+' | '>')) => c.len_utf8(),
+        Some('#') => rest.chars().take_while(|c| *c == '#').count(),
+        Some(c) if c.is_ascii_digit() => {
+            let digits = rest.chars().take_while(|c| c.is_ascii_digit()).count();
+            match rest[digits..].chars().next() {
+                Some('.') | Some(')') => digits + 1,
+                _ => return 0,
+            }
+        }
+        _ => return 0,
+    };
+    let after = &rest[marker..];
+    let gap = after.len() - after.trim_start().len();
+    if gap == 0 {
+        return 0;
+    }
+    lead + marker + gap
+}
+
 fn build_text(src: &str) -> Doc {
     let mut doc = Doc::default();
     let lines = line_ranges(src);
@@ -1537,8 +1570,11 @@ fn build_text(src: &str) -> Doc {
             continue;
         }
         doc.ops.push(NormOp::Block);
+        // The marker is structure, not prose. Opening the range past it puts
+        // the block start where the reader sees it, and leaves the marker
+        // bytes to be reported as excluded structure like any other.
         doc.ops.push(NormOp::Text {
-            range: lr.clone(),
+            range: lr.start + marker_run_len(line)..lr.end,
             flags: 0,
         });
         let trimmed = line.trim_start();

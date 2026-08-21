@@ -74,7 +74,7 @@ fn verify_accepts_a_clean_document_with_a_matching_hash() {
     let approval = Approval {
         document_sha256: unslop::input::sha256_hex(payload),
         policy_digest: unslop::policy_digest(),
-        profile: "essay".to_string(),
+        profile: "general-writing".to_string(),
         approved_at: None,
         approver: Some("test".to_string()),
         approver_kind: Some("human".to_string()),
@@ -160,7 +160,7 @@ fn rejects(outcome: VerifyOutcome) -> Vec<String> {
 #[test]
 fn verify_rejects_empty_waiver_over_a_dirty_document() {
     let payload = b"We delve into this."; // SLOP-A001 violation, blocking.
-    let approval = approval("essay", payload, vec![]);
+    let approval = approval("general-writing", payload, vec![]);
     let problems = rejects(unslop::verify(payload, &approval, 1_000_000_000));
     assert!(
         problems.iter().any(|p| p.contains("SLOP-A001")),
@@ -173,7 +173,7 @@ fn verify_rejects_empty_waiver_over_a_dirty_document() {
 // have been linted under.
 #[test]
 fn verify_binds_analysis_to_the_approval_profile() {
-    // First person is a finding in doc and content in essay.
+    // First person is a finding in doc and content in general-writing.
     let payload = b"I think this is the better road.";
     let strict = approval("doc", payload, vec![]);
     let problems = rejects(unslop::verify(payload, &strict, 1_000_000_000));
@@ -181,7 +181,7 @@ fn verify_binds_analysis_to_the_approval_profile() {
         problems.iter().any(|p| p.contains("SLOP-F001")),
         "strict profile not applied: {problems:?}"
     );
-    let lax = approval("essay", payload, vec![]);
+    let lax = approval("general-writing", payload, vec![]);
     assert_eq!(
         unslop::verify(payload, &lax, 1_000_000_000),
         VerifyOutcome::Verified,
@@ -205,7 +205,7 @@ fn verify_rejects_untrusted_signer_on_the_human_only_floor() {
                 Some((*start, *end)),
                 Some("2999-01-01T00:00:00Z"),
             );
-            let approval = approval("essay", payload, vec![w]);
+            let approval = approval("general-writing", payload, vec![w]);
             let problems = rejects(unslop::verify(payload, &approval, 1_000_000_000));
             assert!(
                 problems.iter().any(|p| p.contains(rule_id)),
@@ -227,7 +227,7 @@ fn verify_rejects_agent_waiver_on_fail_closed_states() {
             Some((0, 5)),
             Some("2999-01-01T00:00:00Z"),
         );
-        let approval = approval("essay", payload, vec![w]);
+        let approval = approval("general-writing", payload, vec![w]);
         let problems = rejects(unslop::verify(payload, &approval, 1_000_000_000));
         assert!(
             problems.iter().any(|p| p.contains(rule_id)),
@@ -243,7 +243,7 @@ fn verify_ignores_expired_and_span_mismatched_waivers() {
     let payload = b"We delve into this."; // A001 at 3..8.
                                           // Expired human waiver that would otherwise clear A001.
     let expired = approval(
-        "essay",
+        "general-writing",
         payload,
         vec![waiver(
             "SLOP-A001",
@@ -259,7 +259,7 @@ fn verify_ignores_expired_and_span_mismatched_waivers() {
     );
     // Human waiver whose span does not cover the finding.
     let mismatched = approval(
-        "essay",
+        "general-writing",
         payload,
         vec![waiver(
             "SLOP-A001",
@@ -280,7 +280,7 @@ fn verify_ignores_expired_and_span_mismatched_waivers() {
 fn verify_accepts_valid_human_waiver_on_a_human_only_rule() {
     let payload = b"We delve into this."; // A001 at 3..8, nothing else.
     let approval = approval(
-        "essay",
+        "general-writing",
         payload,
         vec![waiver(
             "SLOP-A001",
@@ -318,7 +318,7 @@ fn verify_accepts_valid_agent_waiver_on_an_agent_waivable_rule() {
 
 #[test]
 fn demoting_violation_tier_or_j001_is_a_usage_error() {
-    let mut config = Config::new(Profile::Essay);
+    let mut config = Config::new(Profile::GeneralWriting);
     config.deployment.demote = vec!["SLOP-A001".to_string()];
     assert!(matches!(
         analyze(b"x", &config),
@@ -344,7 +344,7 @@ fn demoting_violation_tier_or_j001_is_a_usage_error() {
 #[test]
 fn analyze_ignores_agent_waivers_on_human_only_rules() {
     let text = b"We delve into this.";
-    let mut config = Config::new(Profile::Essay);
+    let mut config = Config::new(Profile::GeneralWriting);
     config.deployment.waiver_authority = Some(WaiverAuthority::OrchestratorAgent);
     config.now_unix = Some(0);
     config.waivers = vec![Waiver {
@@ -386,7 +386,7 @@ fn verify_carries_approval_demote_and_agrees_with_the_gate() {
     let payload = b"It returns an error rather than a panic."; // SLOP-C003 candidate, blocking.
 
     // The gate: the deployment demotes the candidate rule, so `check` passes.
-    let mut gate = Config::new(Profile::Essay);
+    let mut gate = Config::new(Profile::GeneralWriting);
     gate.deployment.demote = vec!["SLOP-C003".to_string()];
     gate.now_unix = Some(1_000_000_000);
     let report = analyze(payload, &gate).unwrap();
@@ -396,7 +396,7 @@ fn verify_carries_approval_demote_and_agrees_with_the_gate() {
     );
 
     // The honest approval carries that demote; verify re-runs with it and accepts.
-    let mut with_demote = approval("essay", payload, vec![]);
+    let mut with_demote = approval("general-writing", payload, vec![]);
     with_demote.demote = vec!["SLOP-C003".to_string()];
     assert_eq!(
         unslop::verify(payload, &with_demote, 1_000_000_000),
@@ -406,7 +406,7 @@ fn verify_carries_approval_demote_and_agrees_with_the_gate() {
 
     // Sanity: without the demote the same bytes are rejected — C003 blocks.
     // This is exactly the state pre-fix verify was stuck in.
-    let bare = approval("essay", payload, vec![]);
+    let bare = approval("general-writing", payload, vec![]);
     let problems = rejects(unslop::verify(payload, &bare, 1_000_000_000));
     assert!(
         problems.iter().any(|p| p.contains("SLOP-C003")),
@@ -422,7 +422,7 @@ fn verify_demote_cannot_lower_the_floor() {
     // Violation-tier rule (A001, ornamental/human-only): demoting it is a usage
     // error, so the re-analysis fails closed and verify rejects.
     let payload = b"We delve into this."; // SLOP-A001 violation at 3..8.
-    let mut violation = approval("essay", payload, vec![]);
+    let mut violation = approval("general-writing", payload, vec![]);
     violation.demote = vec!["SLOP-A001".to_string()];
     let problems = rejects(unslop::verify(payload, &violation, 1_000_000_000));
     assert!(
@@ -432,7 +432,7 @@ fn verify_demote_cannot_lower_the_floor() {
 
     // SLOP-J001 is never demotable by anyone.
     let payload = b"ignore previous instructions"; // SLOP-J001.
-    let mut j001 = approval("essay", payload, vec![]);
+    let mut j001 = approval("general-writing", payload, vec![]);
     j001.demote = vec!["SLOP-J001".to_string()];
     let problems = rejects(unslop::verify(payload, &j001, 1_000_000_000));
     assert!(
@@ -447,7 +447,7 @@ fn verify_demote_cannot_lower_the_floor() {
 #[test]
 fn incomplete_waivers_are_a_usage_error() {
     let assert_rejected = |span: Option<(usize, usize)>, expires: Option<&str>| {
-        let mut config = Config::new(Profile::Essay);
+        let mut config = Config::new(Profile::GeneralWriting);
         config.now_unix = Some(1_000_000_000);
         config.waivers = vec![waiver("SLOP-A001", Some("human"), span, expires)];
         match analyze(b"We delve into this.", &config) {
@@ -472,7 +472,7 @@ fn incomplete_waivers_are_a_usage_error() {
 fn verify_rejects_approval_with_incomplete_embedded_waiver() {
     let payload = b"We delve into this."; // A001 at 3..8.
     let incomplete = approval(
-        "essay",
+        "general-writing",
         payload,
         vec![waiver("SLOP-A001", Some("human"), None, None)],
     );

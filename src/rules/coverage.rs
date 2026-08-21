@@ -30,13 +30,13 @@ pub fn evaluate(
             .map(|r| r.range.len())
             .sum();
         if total > 0 && (total - prose) * 100 >= flag_pct * total {
-            hits.push(Hit::new(idx, 0..total.min(1)));
+            hits.push(Hit::new(idx, crate::first_char_span(&prepared.text)));
         }
     }
 
     if let Some(idx) = super::active(cp, config, "SLOP-H003") {
         if prepared.mixed_line_endings || prepared.bom_stripped {
-            hits.push(Hit::new(idx, 0..prepared.text.len().min(1)));
+            hits.push(Hit::new(idx, crate::first_char_span(&prepared.text)));
         }
         // unusual_scripts_in_identifierlike_prose: a mixed-script token
         // — Latin letters sharing a word with a cross-script homoglyph — is

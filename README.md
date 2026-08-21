@@ -2,9 +2,9 @@
 
 A deterministic linter for formulaic writing patterns: filler, hedging, puffery,
 stock transitions, and the punctuation habits that travel with them.
-Point it at an essay, a blog post, an email, a report, documentation, or a short
-post. It reports the exact span that matched, the rule that matched it, and the
-question a person has to answer about it.
+Point it at an essay, a blog post, an email, a report, documentation, a short
+post, or a thread comment. It reports the exact span that matched, the rule that
+matched it, and the question a person has to answer about it.
 
 A Rust source file is rejected with exit 40. Pass the prose instead, or wrap the
 code in a fenced block. unslop lints source in other languages as prose, so its
@@ -19,7 +19,7 @@ cargo install unslop
 ## Use
 
 ```
-unslop check --profile essay --output text draft.md
+unslop check --profile general-writing --output text draft.md
 unslop check --profile email message.txt
 ```
 
@@ -39,12 +39,13 @@ unslop check --profile email message.txt
 
 | Profile | For |
 |---|---|
-| `essay` | Argued and personal writing, where first person and opinion are the content |
+| `general-writing` | Argued and personal writing, where first person and opinion are the content |
 | `blog-post` | Published articles, with presentation rules at full strength |
 | `email` | Correspondence, where the chat-assistant register is strictest |
 | `report` | Findings someone acts on, where attribution and hedging fire hardest |
 | `doc` | Reference and instructional writing, the strictest plain-speech profile |
 | `social-post` | Short public posts, with length and structure rules off |
+| `comment` | Thread replies, where the assistant register is stricter still and voice runs softer |
 
 ## What it looks for
 

@@ -68,7 +68,7 @@ fn u001_restated_paragraph_fires_once_on_the_second_copy() {
     let text = format!(
         "{PARA} Filler sentence one sits here. Filler sentence two follows with other words.\n\n{PARA}\n"
     );
-    let report = run(&text, Profile::Essay);
+    let report = run(&text, Profile::GeneralWriting);
     assert_invariants(&text, &report);
     let hits = u001(&report);
     assert_eq!(hits.len(), 1, "exactly one duplication finding");
@@ -89,7 +89,7 @@ fn u001_restated_paragraph_fires_once_on_the_second_copy() {
 fn u001_nine_word_repeat_is_below_the_floor() {
     let nine = "The gate runs the policy over every draft twice.";
     let text = format!("{nine} Middle text sits here with several other words.\n\n{nine}\n");
-    let report = run(&text, Profile::Essay);
+    let report = run(&text, Profile::GeneralWriting);
     assert!(
         !has_rule(&report, "SLOP-U001"),
         "the floor moved: a 9-word repeat fired"
@@ -102,7 +102,7 @@ fn u001_nine_word_repeat_is_below_the_floor() {
 fn u001_third_occurrence_reports_again() {
     let text =
         format!("{PARA} Distinct filler follows here.\n\n{PARA} More distinct filler.\n\n{PARA}\n");
-    let report = run(&text, Profile::Essay);
+    let report = run(&text, Profile::GeneralWriting);
     assert_eq!(
         u001(&report).len(),
         2,
@@ -120,7 +120,7 @@ fn u001_emission_cap_is_respected() {
             "Verified against the frozen policy digest and the recorded manifest entry today m{i}.\n\n"
         ));
     }
-    let report = run(&text, Profile::Essay);
+    let report = run(&text, Profile::GeneralWriting);
     assert_invariants(&text, &report);
     assert_eq!(
         u001(&report).len(),
@@ -133,7 +133,7 @@ fn u001_emission_cap_is_respected() {
 #[test]
 fn u001_quoted_copy_is_skipped() {
     let text = format!("{PARA}\n\n> {PARA}\n");
-    let report = run(&text, Profile::Essay);
+    let report = run(&text, Profile::GeneralWriting);
     assert!(
         !has_rule(&report, "SLOP-U001"),
         "a blockquoted copy must not report as self-duplication"
@@ -149,7 +149,7 @@ fn u001_quoted_copy_is_skipped() {
 #[test]
 fn u001_quoted_first_occurrence_does_not_suppress_prose_duplicates() {
     let text = format!("> {PARA}\n\n{PARA}\n\n{PARA}\n");
-    let report = run(&text, Profile::Essay);
+    let report = run(&text, Profile::GeneralWriting);
     assert_invariants(&text, &report);
     let hits = u001(&report);
     assert_eq!(
@@ -187,7 +187,7 @@ fn u001_worst_case_shape_stays_inside_the_memory_budget() {
         text.pop();
         text.push_str(".\n\n");
     }
-    let config = unslop::Config::new(Profile::Essay);
+    let config = unslop::Config::new(Profile::GeneralWriting);
     let report = unslop::analyze(text.as_bytes(), &config).unwrap();
     assert!(
         !report.findings.iter().any(|f| f.rule_id == "SLOP-U001"),
@@ -213,7 +213,7 @@ fn u001_prefix_decoy_does_not_mask_a_later_duplicate() {
                 alpha beta gamma delta epsilon zeta eta theta iota kappa. \
                 ivory jade silver. \
                 alpha beta gamma delta epsilon zeta eta theta iota kappa.\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     let hits = u001(&report);
     assert_eq!(hits.len(), 1, "the duplicate behind the decoy must report");
@@ -241,7 +241,7 @@ fn u001_reports_the_maximal_run_start_behind_a_decoy() {
                 alpha beta gamma delta epsilon zeta eta theta iota kappa lambda. \
                 ivory jade silver. \
                 alpha beta gamma delta epsilon zeta eta theta iota kappa lambda.\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     let hits = u001(&report);
     assert_eq!(hits.len(), 1, "the 11-word duplicate must report once");
@@ -274,7 +274,7 @@ fn u001_dense_repeated_phrase_stays_bounded() {
         i += 1;
     }
     text.push('\n');
-    let config = unslop::Config::new(Profile::Essay);
+    let config = unslop::Config::new(Profile::GeneralWriting);
     let started = std::time::Instant::now();
     let report = unslop::analyze(text.as_bytes(), &config).unwrap();
     let elapsed = started.elapsed();
@@ -312,7 +312,7 @@ fn u001_ranks_candidates_by_total_run_not_forward_length() {
                 separator ivory jade silver.\n\n\
                 > one two three four five\n\n\
                 alpha beta gamma delta epsilon zeta eta theta iota kappa lambda.\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     let hits = u001(&report);
     assert_eq!(hits.len(), 2, "passage-2 and passage-3 repeats each report");
@@ -358,7 +358,7 @@ fn u001_differing_fenced_contents_do_not_fuse_flanking_prose() {
                 different excluded words live here\n\
                 ```\n\
                 zeta eta theta iota kappa.\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     assert!(
         !has_rule(&report, "SLOP-U001"),
@@ -391,7 +391,7 @@ fn u001_walk_cap_recall_is_bounded_per_bucket() {
         .unwrap();
     }
     writeln!(text, "{phrase}.").unwrap();
-    let report = run(&text, Profile::Essay);
+    let report = run(&text, Profile::GeneralWriting);
     assert_invariants(&text, &report);
     let hits = u001(&report);
     assert_eq!(hits.len(), 1, "one flooded bucket must not mask the run");
@@ -420,7 +420,7 @@ fn u001_walk_cap_recall_is_bounded_per_bucket() {
         }
     }
     writeln!(text, "{phrase}.").unwrap();
-    let report = run(&text, Profile::Essay);
+    let report = run(&text, Profile::GeneralWriting);
     assert!(
         !has_rule(&report, "SLOP-U001"),
         "the per-window flood is the accepted bounded-recall miss; \
@@ -435,7 +435,7 @@ fn u001_walk_cap_recall_is_bounded_per_bucket() {
 fn u001_fenced_code_never_shingles() {
     let block = "use std::io; use std::fmt; use std::mem; use std::ops; use std::cmp; extra tokens here now";
     let text = format!("```\n{block}\n```\n\nProse between the fences.\n\n```\n{block}\n```\n");
-    let report = run(&text, Profile::Essay);
+    let report = run(&text, Profile::GeneralWriting);
     assert!(
         !has_rule(&report, "SLOP-U001"),
         "identical fenced blocks fired U001"
@@ -457,7 +457,7 @@ fn u001_fires_in_every_profile_and_is_deterministic() {
     }
 
     let dup = format!("{PARA} Filler follows in this line.\n\n{PARA}\n");
-    let config = unslop::Config::new(Profile::Essay);
+    let config = unslop::Config::new(Profile::GeneralWriting);
     let a = serde_json::to_string(&unslop::analyze(dup.as_bytes(), &config).unwrap()).unwrap();
     let b = serde_json::to_string(&unslop::analyze(dup.as_bytes(), &config).unwrap()).unwrap();
     assert_eq!(a, b, "duplication analysis must be deterministic");
@@ -469,7 +469,7 @@ fn u001_is_silent_on_unrepeated_prose() {
     let text = "The rain arrived late on Thursday and stayed for two days. \
                 Everyone in the valley had planned for a dry weekend, and \
                 the river came up over the low road by Saturday morning.\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert!(!has_rule(&report, "SLOP-U001"), "clean prose fired U001");
 }
 
@@ -481,7 +481,7 @@ fn u001_is_silent_on_unrepeated_prose() {
 #[test]
 fn c009_reports_the_figure_and_never_gates() {
     let t = "Findings judge house style, not authorship.\n";
-    let report = run(t, Profile::Essay);
+    let report = run(t, Profile::GeneralWriting);
     let f = report
         .findings
         .iter()
@@ -504,7 +504,7 @@ fn c009_reports_the_figure_and_never_gates() {
 #[test]
 fn c009_is_silent_on_a_contrast_free_document() {
     let t = "The parser handles nested lists without recursion.\n";
-    let report = run(t, Profile::Essay);
+    let report = run(t, Profile::GeneralWriting);
     assert!(
         !has_rule(&report, "SLOP-C009"),
         "C009 emitted an all-zero line"
@@ -516,7 +516,7 @@ fn c009_is_silent_on_a_contrast_free_document() {
 #[test]
 fn c009_excludes_concession_and_balance_shapes() {
     let t = "It is simple but powerful in daily use.\n";
-    let report = run(t, Profile::Essay);
+    let report = run(t, Profile::GeneralWriting);
     assert!(has_rule(&report, "SLOP-C006"), "C006 control went silent");
     assert!(
         !has_rule(&report, "SLOP-C009"),

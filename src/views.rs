@@ -74,6 +74,51 @@ const ENTITIES: &[(&str, &str)] = &[
     ("&#8217;", "\u{2019}"),
 ];
 
+/// Bullet glyphs a rendered list pastes as. Both of the sets below carry
+/// them: the extractor strips one opening a line of plain text, and the
+/// block-start walk reads past one wherever it stands. Declared once so the
+/// two can never disagree about what a bullet is.
+///
+/// This list and `DECORATION_RANGES` are the two sets F-R14a and F-R14e make
+/// fleet-wide, and all three repositories carry the same members. They sit
+/// together here so a future harvest edits both rather than one.
+///
+/// U+2022 is the one with a measured population, at 5 occurrences and none
+/// line-leading in a 738k-line repository corpus, and 39 occurrences with 2
+/// line-leading in a 504k-line prose corpus. The other three are here for
+/// completeness by analogy rather than measured need: their combined
+/// line-leading count across both corpora is zero. U+00B7 stays out. It is a
+/// letter in Catalan and a separator inside running prose, it appeared 232
+/// times across the same corpora with none line-leading, and a rendered list
+/// does not paste as one.
+pub(crate) const BULLET_MARKERS: &[char] = &['\u{2022}', '\u{2023}', '\u{2043}', '\u{2219}'];
+
+/// Codepoint ranges the block-start walk reads past when they stand in front
+/// of a word. See `BULLET_MARKERS` for the fleet-source note that covers both
+/// sets. The ranges are spelled out rather than taken from a general-category
+/// table, because the crate carries no such table and a bounded list is
+/// auditable against the corpus probes that measured the change.
+const DECORATION_RANGES: &[(u32, u32)] = &[
+    (0x200D, 0x200D), // zero width joiner
+    (0x20E3, 0x20E3), // combining enclosing keycap
+    (0xFE0E, 0xFE0F), // variation selectors 15 and 16
+    (0x203C, 0x203C), // double exclamation
+    (0x2049, 0x2049), // exclamation question
+    (0x2122, 0x2122), // trade mark
+    (0x2139, 0x2139), // information
+    (0x2190, 0x21FF), // arrows
+    (0x2300, 0x23FF), // miscellaneous technical
+    (0x24C2, 0x24C2), // circled M
+    (0x25A0, 0x25FF), // geometric shapes, the nested-list paste glyphs
+    (0x2600, 0x27BF), // miscellaneous symbols and dingbats
+    (0x2B00, 0x2BFF), // miscellaneous symbols and arrows
+    (0x3030, 0x3030),
+    (0x303D, 0x303D),
+    (0x3297, 0x3297),
+    (0x3299, 0x3299),
+    (0x1F000, 0x1FAFF), // the emoji planes
+];
+
 /// Unicode `Default_Ignorable_Code_Point` (DerivedCoreProperties): every
 /// codepoint a conformant renderer shows as NOTHING when unsupported — soft
 /// hyphen, CGJ, bidi marks/embeddings/isolates, Mongolian and Khmer inherent
@@ -992,30 +1037,61 @@ impl NormView {
     }
 
     /// True when the position begins a block or line, or follows terminal
-    /// punctuation plus whitespace.
+    /// punctuation plus whitespace. A leading run of decoration is looked
+    /// past, so the position a reader sees as the opening of a line is the
+    /// position this reports.
     pub fn is_block_start(&self, norm_offset: usize) -> bool {
         if norm_offset == 0 {
             return true;
         }
         let before = &self.text[..norm_offset];
-        let trimmed = before.trim_end_matches([' ', '\t']);
+        let trimmed = before.trim_end_matches(is_leading_decoration);
         if trimmed.is_empty() || trimmed.ends_with('\n') {
             return true;
         }
         if trimmed.ends_with(['.', '!', '?', ':']) && trimmed.len() < before.len() {
             return true;
         }
-        // A recorded line start with only whitespace between it and here.
+        // A recorded line start with only decoration between it and here.
         if let Some(&ls) = self.line_starts.iter().rev().find(|&&ls| ls <= norm_offset) {
             if self.text[ls..norm_offset]
                 .chars()
-                .all(|c| c == ' ' || c == '\t' || c == '\n')
+                .all(is_leading_decoration)
             {
                 return true;
             }
         }
         false
     }
+}
+
+/// What a block marker may put in front of the first word without moving it.
+/// The semantics block reads the block-start position after markers are
+/// stripped, and an emoji a writer types at the head of a line is a marker in
+/// every sense that matters: it decorates the opening rather than continuing a
+/// sentence. Whitespace, the symbol and pictograph ranges, and the joiners
+/// that hold an emoji sequence together all belong to that run. The ranges are
+/// spelled out rather than taken from a general-category table, because the
+/// crate carries no such table and a bounded list is auditable against the
+/// corpus probe that measured this change. Letters, digits, and the
+/// punctuation that ends or continues a sentence are deliberately absent: a
+/// comma or a dash before a word means the word is mid-sentence, which is the
+/// distinction the whole test exists to draw.
+///
+/// The bullet glyphs come from `BULLET_MARKERS` and everything else from
+/// `DECORATION_RANGES`. Reading the bullets from the marker list rather than
+/// folding them into a range is what keeps the two sets honest: the geometric
+/// shapes a renderer reaches for at a nested level were already read past
+/// because they sit inside a range carried whole, while the plain bullet sits
+/// in a different Unicode block and was not. Nothing intended that split, and
+/// a pasted list should not depend on which block Unicode filed its marker
+/// under.
+fn is_leading_decoration(c: char) -> bool {
+    if c.is_whitespace() || BULLET_MARKERS.contains(&c) {
+        return true;
+    }
+    let u = c as u32;
+    DECORATION_RANGES.iter().any(|&(lo, hi)| lo <= u && u <= hi)
 }
 
 #[cfg(test)]

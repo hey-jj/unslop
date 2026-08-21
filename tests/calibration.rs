@@ -21,7 +21,7 @@ fn placeholder_dash_cells_no_longer_fuse_across_cell_boundaries() {
         | --- | --- | --- |\n\
         | serde | -- | not audited |\n\
         | tokio | -- | pending |\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     assert!(
         !has_rule(&report, "SLOP-S001"),
@@ -42,7 +42,7 @@ fn genuine_slop_inside_a_single_cell_still_fires() {
     let text = "| Item | Note |\n\
         | --- | --- |\n\
         | widget | a truly game-changer design |\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     let a001: Vec<_> = report
         .findings
@@ -63,7 +63,7 @@ fn signature_shape_within_one_cell_still_fires() {
     let text = "| Item | Note |\n\
         | --- | --- |\n\
         | -- Claude | sig in cell |\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     let s004: Vec<_> = report
         .findings
@@ -80,7 +80,7 @@ fn signature_shape_within_one_cell_still_fires() {
 #[test]
 fn prose_before_a_table_does_not_fuse_into_the_first_cell() {
     let text = "--\n\n| Alpha | Beta |\n| --- | --- |\n| a | b |\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     assert!(
         !has_rule(&report, "SLOP-S004"),
@@ -94,7 +94,7 @@ fn prose_before_a_table_does_not_fuse_into_the_first_cell() {
 #[test]
 fn normal_prose_is_unaffected_by_table_barriers() {
     let text = "The parser handles nested lists.\n\n-- Claude\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     assert!(
         has_rule(&report, "SLOP-S004"),
@@ -102,7 +102,7 @@ fn normal_prose_is_unaffected_by_table_barriers() {
     );
 
     let clean = "The parser handles nested lists without recursion.\n";
-    let report = run(clean, Profile::Essay);
+    let report = run(clean, Profile::GeneralWriting);
     assert_invariants(clean, &report);
     assert!(
         report.findings.iter().all(|f| f.state != "violation"),
@@ -256,7 +256,7 @@ fn a002_harness_calibration_boundaries_are_pinned() {
 #[test]
 fn c006_cross_cell_suppressed_but_single_cell_fires() {
     let cross = "| A | B |\n| --- | --- |\n| simple | but flexible |\n";
-    let report = run(cross, Profile::Essay);
+    let report = run(cross, Profile::GeneralWriting);
     assert_invariants(cross, &report);
     assert!(
         !has_rule(&report, "SLOP-C006"),
@@ -264,7 +264,7 @@ fn c006_cross_cell_suppressed_but_single_cell_fires() {
         common::rule_ids(&report)
     );
     let single = "| A | B |\n| --- | --- |\n| x | simple but flexible |\n";
-    let report = run(single, Profile::Essay);
+    let report = run(single, Profile::GeneralWriting);
     assert_invariants(single, &report);
     assert!(
         has_rule(&report, "SLOP-C006"),
@@ -282,7 +282,7 @@ fn c006_cross_cell_suppressed_but_single_cell_fires() {
 fn c005_cross_cell_bridge_persists_as_candidate() {
     let text = "| A | B | C |\n| --- | --- | --- |\n\
         | fast | Linux, macOS, and Windows | reliable |\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     let c005: Vec<_> = report
         .findings
@@ -327,7 +327,7 @@ fn banned_words_in_code_spans_and_fences_do_not_fire() {
         Never use these words: `delve`, `game-changer`, `robust`, `essentially`.\n\n\
         The banned list in fenced form:\n\n\
         ```text\ndelve\ngame-changer\nessentially\n```\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     assert!(
         !report
@@ -349,7 +349,7 @@ fn banned_words_in_code_spans_and_fences_do_not_fire() {
 #[test]
 fn banned_words_in_a_blockquote_downgrade_to_candidate() {
     let text = "# Style guide\n\n> Avoid: delve, game-changer.\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     let a001: Vec<_> = report
         .findings
@@ -370,7 +370,7 @@ fn banned_words_in_a_blockquote_downgrade_to_candidate() {
 #[test]
 fn plain_prose_banned_word_enumeration_still_fires() {
     let text = "# Style guide\n\nWords to avoid:\n\n- delve\n- game-changer\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     let a001: Vec<_> = report
         .findings
@@ -385,12 +385,12 @@ fn plain_prose_banned_word_enumeration_still_fires() {
 #[test]
 fn genuine_slop_in_prose_and_avoid_lists_still_fires() {
     let text = "We delve into the internals of the parser.\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     assert!(has_rule(&report, "SLOP-A001"));
 
     let text = "Mistakes to avoid:\n\n- Forgetting to delve into the config first.\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     assert!(
         report
@@ -415,7 +415,7 @@ fn single_cell_lexicon_word_is_a_documented_residual_not_fusion() {
     let text = "| Crate | Verdict |\n\
         | --- | --- |\n\
         | robust | clean |\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     // robust sits on SLOP-A010 since the ornamental set split by whether a
     // word still has a plain sense to mean.
@@ -433,7 +433,7 @@ fn single_cell_lexicon_word_is_a_documented_residual_not_fusion() {
     let text = "| Crate | Verdict |\n\
         | --- | --- |\n\
         | `robust` | clean |\n";
-    let report = run(text, Profile::Essay);
+    let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
     assert!(
         !has_rule(&report, "SLOP-A001"),
@@ -516,6 +516,46 @@ fn c007_negative_boundaries_stay_silent() {
             !has_rule(&report, "SLOP-C007"),
             "C007 fired on negative {text:?}: {:?}",
             common::rule_ids(&report)
+        );
+    }
+}
+
+/// A tail whose negation runs straight into an -ing word is a manner clause,
+/// not a noun phrase, so the T1 trigger never opens on it. The test is
+/// adjacency: a determiner between the two puts a real noun back in the tail.
+/// Five words end in -ing without being participles and are denied on the way
+/// through, which is what keeps `not everything` and `not during matching`
+/// firing exactly as they did.
+#[test]
+fn c007_reads_a_participial_tail_as_a_manner_clause() {
+    for text in [
+        "She listened, never judging anyone.",
+        "He worked all night, never complaining.",
+        "They shipped it quietly, not making a fuss.",
+    ] {
+        let t = format!("{text}\n");
+        let report = run(&t, Profile::Doc);
+        assert_invariants(&t, &report);
+        assert!(
+            !has_rule(&report, "SLOP-C007"),
+            "C007 read a participial adjunct as a tail: {text:?}"
+        );
+    }
+    for text in [
+        "The rule reports the span, not the sentence.",
+        // everything is on the deny-list.
+        "It flags the shape, not everything.",
+        // A determiner between the negation and the -ing word.
+        "It flags the shape, not the beginning.",
+        // during is denied so the participle test reads correctly.
+        "predicates are cloned during build, not during matching.",
+    ] {
+        let t = format!("{text}\n");
+        let report = run(&t, Profile::Doc);
+        assert_invariants(&t, &report);
+        assert!(
+            has_rule(&report, "SLOP-C007"),
+            "C007 lost a real tail: {text:?}"
         );
     }
 }
@@ -911,7 +951,7 @@ fn v004_lexicon_and_construction_positives_fire() {
     let rule = pkg.rule_by_id("SLOP-V004").unwrap();
     for term in &rule.terms {
         let text = format!("The check was rerun {term} without changes.\n");
-        let report = run(&text, Profile::Essay);
+        let report = run(&text, Profile::GeneralWriting);
         let f = report
             .findings
             .iter()
@@ -924,7 +964,7 @@ fn v004_lexicon_and_construction_positives_fire() {
         "All three figures confirmed.\n",
         "All 12 counts verified against the ledger.\n",
     ] {
-        let report = run(text, Profile::Essay);
+        let report = run(text, Profile::GeneralWriting);
         assert!(
             report
                 .findings
@@ -940,7 +980,7 @@ fn v004_lexicon_and_construction_positives_fire() {
 #[test]
 fn v004_lowercase_flagged_for_is_silent() {
     let t = "The commit was flagged for review by CI.\n";
-    let report = run(t, Profile::Essay);
+    let report = run(t, Profile::GeneralWriting);
     assert!(
         !has_rule(&report, "SLOP-V004"),
         "V004 fired on lowercase flagged-for: {:?}",
@@ -972,7 +1012,7 @@ fn v004_request_reference_is_a_candidate_everywhere() {
 #[test]
 fn v004_phrases_in_code_formatting_are_silent() {
     let t = "The banned phrase list:\n\n```\nnot rerun in this turn\nFlagged for JJ\n```\n";
-    let report = run(t, Profile::Essay);
+    let report = run(t, Profile::GeneralWriting);
     assert!(
         !has_rule(&report, "SLOP-V004"),
         "V004 fired from inside a code fence"
@@ -1027,12 +1067,12 @@ fn v005_release_diction_and_prose_form_are_silent() {
         );
     }
     let stamp = "Ruled 2026-08-14 by the owner.\n";
-    let report = run(stamp, Profile::Essay);
+    let report = run(stamp, Profile::GeneralWriting);
     let f = report
         .findings
         .iter()
         .find(|f| f.rule_id == "SLOP-V005")
-        .expect("the stamp is a candidate in essay");
+        .expect("the stamp is a candidate in general-writing");
     assert_eq!(f.state, "candidate");
     let report = run(stamp, Profile::Report);
     let f = report
@@ -1055,7 +1095,7 @@ fn c008_pair_shapes_fire_as_experimental_candidates() {
         "The survey asks not what they know about religion, but how they value it.\n",
         "The cache is not a source of truth. It is an optimization.\n",
     ] {
-        let report = run(text, Profile::Essay);
+        let report = run(text, Profile::GeneralWriting);
         assert_invariants(text, &report);
         let f = report
             .findings
@@ -1073,7 +1113,7 @@ fn c008_pair_shapes_fire_as_experimental_candidates() {
 #[test]
 fn c008_directive_interpolation_lands_candidate() {
     let t = "Ship the fix, not the workaround, but tell support first.\n";
-    let report = run(t, Profile::Essay);
+    let report = run(t, Profile::GeneralWriting);
     let f = report
         .findings
         .iter()
@@ -1092,7 +1132,7 @@ fn c008_stays_silent_on_adjacent_family_territory() {
         "The tool is not just a linter but a gate.\n",
         "Use exponential backoff rather than fixed sleeps.\n",
     ] {
-        let report = run(text, Profile::Essay);
+        let report = run(text, Profile::GeneralWriting);
         assert!(
             !has_rule(&report, "SLOP-C008"),
             "C008 fired on adjacent-family text {text:?}: {:?}",
