@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.1.4] - 2026-09-02
+
+### Added
+
+- `SLOP-V007` decision-attribution, a candidate in the assistant-voice family,
+  on in every profile. It reports a decision credited to a role noun in the
+  third person, in a draft the person that noun names is signing. Two closed
+  role sets. With an open role (owner, maintainer, author, principal, proxy,
+  operator, orchestrator, human, lead, user, reviewer) it reads the possessive
+  on a decision noun (`Owner's ruling, 2026-08-20`, `the maintainer's call`),
+  a verdict verb (`the owner ruled`, `the proxy signed off`), the by-form
+  (`requested by the user`), the hyphen compound (`owner-flagged`), `per the
+  owner`, `at the user's request`, and `on the principal's instruction`. With
+  a ledger role (owner, maintainer, principal, proxy, orchestrator, lead)
+  it also reads the loose verbs (`the owner wants`, `the maintainer asked`, `the
+  owner has ruled`), the loose possessives (`the owner's request`, `in the
+  owner's stead`), and the bare compound (`owner decision`, `owner-proxy
+  ruling`). Three shapes
+  carry no role: a decision noun on an ISO date (`ruling (2026-08-20)`), a
+  line-start label (`Ruling:`, `Decision:`), and the second person aimed at
+  the signer (`per your ruling`, `as you directed`). A trailing ISO date joins the
+  span, so a dated stamp reports once. The loose verbs stay off the open
+  roles, so `the user asked` and `the author said` stay silent, and the verb
+  sets carry verdict verbs only, so `user-defined` and `set by the user` stay
+  silent. The roleless verb-plus-date stamp stays with `SLOP-V005`. The
+  specimen shipped in an issue after the drafting agent told two reviewers
+  to read the paragraph as an attributed decision, and no rule existed for
+  the shape. A four-week sweep of session transcripts supplied the
+  spellings.
+- The skill gains the shape as pattern 34 and a third question for the
+  writer's own sentences.
+
+### Changed
+
+- The lazy DFA caches behind the regex rules grow from 4 MiB to 8 MiB. The
+  sixteen patterns of `SLOP-V007` pushed the reverse automaton's minimum past
+  the old bound, which failed policy load at exit 30. The cache is an upper
+  bound on memory the automaton may use, and nothing else changes.
+
 ## [0.1.3] - 2026-08-20
 
 ### Added

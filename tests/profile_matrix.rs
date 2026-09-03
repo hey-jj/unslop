@@ -293,10 +293,10 @@ fn the_renamed_profile_answers_to_one_name() {
 #[test]
 fn tier_counts_are_pinned() {
     let pkg = policy::load().unwrap();
-    assert_eq!(pkg.rules.len(), 93);
+    assert_eq!(pkg.rules.len(), 94);
     let count = |t: Tier| pkg.rules.iter().filter(|r| r.tier == t).count();
     assert_eq!(count(Tier::Violation), 22);
-    assert_eq!(count(Tier::Candidate), 64);
+    assert_eq!(count(Tier::Candidate), 65);
     assert_eq!(count(Tier::CoverageHint), 7);
 }
 

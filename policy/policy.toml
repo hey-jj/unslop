@@ -3,7 +3,7 @@
 # names. Lexicon files under words/ are canonical data referenced by rule ID.
 
 [policy]
-version = "0.1.3"
+version = "0.1.4"
 # sha256 over the canonical serialization of the whole package (sorted keys,
 # LF endings, sorted file list), computed with this field set to the empty
 # string. The build embeds the computed value in every result and snapshot.
@@ -561,6 +561,37 @@ match = { kind = "word-set", lexicon = "words/correspondence-offers.txt", case =
 guard = "An offer addressed to a person the writer knows, who can take it up. Off in email, where that person exists. Everywhere else the line is addressed to nobody in particular and the reader has no channel to answer on. comment stays on, the second deliberate divergence from email beside SLOP-S004: a line saying let me know if you have any questions under a review comment reads as a paste, because the thread is already the channel and everyone in it can reply. The turn-taking half of the family is SLOP-V003 and stays blocking in email and comment alike."
 judge = "Is there a named reader who can act on this offer?"
 profiles = { default = "apply", email = "off" }
+
+[[rule]]
+id = "SLOP-V007"
+name = "decision-attribution"
+family = "assistant-voice"
+tier = "candidate"
+lifecycle = "blocking"
+origin = "owner-mandate"
+view = "norm"
+match = { kind = "regex-set" }
+patterns = [
+  '(?i)\b(the\s{1,3})?(owner|maintainer|author|principal|proxy|operator|orchestrator|human|lead|user|reviewer)([\s-]{1,3}proxy)?[\x27\u{2019}]s\s{1,3}(rulings?|decisions?|verdicts?|adjudications?|directives?|mandates?|sign-?off|doctrine|call|instructions?|approval|blessing|go-ahead|say-so)\b(\s{0,3}[,:(]?\s{0,3}(on\s{1,3}|of\s{1,3})?\d{4}-[01]\d-[0-3]\d\)?)?',
+  '(?i)\b(the\s{1,3})?(owner-proxy|proxy-owner|owner|maintainer|principal|proxy|orchestrator|lead)([\s-]{1,3}proxy)?[\x27\u{2019}]s\s{1,3}(requests?|intent|preferences?|wishes|standing|ask|guidance|direction|choice|stead|rebuke|correction|sanction)\b(\s{0,3}[,:(]?\s{0,3}(on\s{1,3}|of\s{1,3})?\d{4}-[01]\d-[0-3]\d\)?)?',
+  '(?i)\b(the\s{1,3})?(owner|maintainer|author|principal|proxy|operator|orchestrator|human|lead|user|reviewer)([\s-]{1,3}proxy)?\s{1,3}((has|had|have)\s{1,3})?(ruled|rules|adjudicated|adjudicates|mandated|mandates|directed|directs|instructed|instructs|decided|decides|signed\s{1,3}off|signs\s{1,3}off|vetoed|vetoes|approved|approves|overruled|overrules|ratified|ratifies)\b(\s{1,3}(on\s{1,3})?(this|that|it)\b)?(\s{0,3}[,:(]?\s{0,3}(on\s{1,3}|of\s{1,3})?\d{4}-[01]\d-[0-3]\d\)?)?',
+  '(?i)\b(the\s{1,3})?(owner-proxy|proxy-owner|owner|maintainer|principal|proxy|orchestrator|lead)([\s-]{1,3}proxy)?\s{1,3}((has|had|have)\s{1,3})?(wants|wanted|asked|asks|chose|chooses|said|says|confirms|confirmed|rejected|rejects|prefers|preferred|flagged|flags|requested|requests|accepted|accepts|declined|declines|sanctioned|sanctions|greenlit|authorized|authorizes|declared|declares|commissioned|commissions|overrode|overrides)\b(\s{1,3}(this|that|it)\b)?(\s{0,3}[,:(]?\s{0,3}(on\s{1,3}|of\s{1,3})?\d{4}-[01]\d-[0-3]\d\)?)?',
+  '(?i)\b(ruled|decided|approved|mandated|directed|instructed|adjudicated|ratified|requested|flagged|sanctioned|signed\s{1,3}off)\s{1,3}(on\s{1,3})?by\s{1,3}(the\s{1,3})?(owner|maintainer|author|principal|proxy|operator|orchestrator|human|lead|user|reviewer)(\s{1,3}proxy|[\x27\u{2019}]s\s{1,3}proxy)?\b',
+  '(?i)\b(owner|maintainer|author|principal|proxy|operator|orchestrator|human|lead|user|reviewer)-(ruled|flagged|mandated|directed|approved|decided|requested|instructed|adjudicated|ratified|sanctioned)\b',
+  '(?i)\b(owner-proxy|proxy-owner|owner|maintainer|principal|proxy|orchestrator|lead)([\s-]{1,3}proxy)?\s{1,3}(ruling|decision|directive|instruction|verdict|sign-?off|mandate|adjudication|rebuke|correction|sanction)s?\b(\s{0,3}[,:(]?\s{0,3}(on\s{1,3}|of\s{1,3})?\d{4}-[01]\d-[0-3]\d\)?)?',
+  '(?i)\bper\s{1,3}the\s{1,3}(owner|maintainer|author|principal|proxy|operator|orchestrator|human|lead|user|reviewer)([\s-]{1,3}proxy)?([\x27\u{2019}]s\s{1,3}(rulings?|decisions?|verdicts?|instructions?|directives?|guidance|direction|request|call|preferences?|wishes))?\b',
+  '(?i)\bat\s{1,3}the\s{1,3}(owner|maintainer|author|principal|proxy|operator|orchestrator|human|lead|user|reviewer)([\s-]{1,3}proxy)?[\x27\u{2019}]s\s{1,3}(request|direction|behest|instructions?|insistence)\b',
+  '(?i)\bon\s{1,3}the\s{1,3}(owner|maintainer|author|principal|proxy|operator|orchestrator|human|lead|user|reviewer)([\s-]{1,3}proxy)?[\x27\u{2019}]s\s{1,3}(instructions?|directions?|orders|say-so|authority)\b',
+  '(?i)\b(ruling|decision|directive|instruction|verdict|sign-?off|mandate|adjudication|rebuke|correction|sanction)s?\s{0,3}[,(]?\s{0,3}(of\s{1,3}|on\s{1,3})?\d{4}-[01]\d-[0-3]\d\)?',
+  '(?i)^\s{0,3}([-*+]\s{1,3}|\d{1,3}[.)]\s{1,3}|#{1,6}\s{1,3}|>\s{1,3})?[*_]{0,2}(ruling|verdict|adjudication|directive|decision|sign-?off)s?[*_]{0,2}(\s{0,3}[,:(]?\s{0,3}(on\s{1,3}|of\s{1,3})?\d{4}-[01]\d-[0-3]\d\)?)?[*_]{0,2}\s{0,3}:',
+  '(?i)\b(per|under|following|on)\s{1,3}your\s{1,3}(rulings?|directives?|instructions?|decision|verdict|sign-?off|mandate|call|ask)\b',
+  '(?i)\byour\s{1,3}(rulings?|directives?|adjudication|sign-?off|mandate)\b',
+  '(?i)\byou\s{1,3}(ruled|directed|mandated|adjudicated|overruled|signed\s{1,3}off)\b',
+  '(?i)\bas\s{1,3}you\s{1,3}(directed|instructed|ruled|mandated|adjudicated)\b',
+]
+guard = "A decision credited to a role noun in the third person, in a draft the person that noun names is signing. Two role sets, both closed. The open roles are owner, maintainer, author, principal, proxy, operator, orchestrator, human, lead, user, and reviewer, and any of them takes an optional proxy after it. With an open role the rule reads the possessive on a decision noun (the owner's ruling, the maintainer's call), a verdict verb (the owner ruled, the proxy signed off), the passive by-form (approved by the maintainer, requested by the user), the hyphen compound (owner-flagged, user-requested), per the role, at the role's request, and on the role's instruction. The ledger roles are owner, maintainer, principal, proxy, orchestrator, and lead, the nouns an agent uses for the person it works for. With a ledger role the rule also reads the loose verbs (the owner wants, the maintainer asked, the lead chose, the owner has ruled), the loose possessives (the owner's request, the owner's intent, in the owner's stead), and the bare role-noun compound (owner decision, owner directive, owner-proxy ruling). Three shapes carry no role: a decision noun on an ISO date (ruling (2026-08-20), directive of 2026-08-24), a block-start label closed by a colon (Ruling:, Verdict:, Decision:), and the second person aimed at the signer (per your ruling, your directive, you ruled, as you directed). A trailing date on any spelling joins the span, so a dated stamp reports once. The shape enters through an agent that drafts in a person's name and records where the choice came from, and the date beside it is a ledger row that leaked. A writer does not report their own decision in the third person, so where the noun names the writer the sentence is the agent speaking. The loose verbs stay off the open roles on purpose, because the user asked and the author said are the ordinary prose of a report and a review, so those two spellings stay a hand read. The open-role forms collide with ordinary English too. A book's author decides, an OAuth user approves, and a reviewer's comments are a fact about a manuscript. Every collision reaches the judge question, and none of them carries a carve-out, because the answer depends on who the noun names in this draft. Term-of-art compounds stay out of the compound arm: user-defined, user-specified, and user-selected name a mechanism, and a value set by the user is a config fact, so the verb sets carry verdict verbs only. The verb-plus-date stamp with no role (ruled 2026-08-14) is SLOP-V005 and reports there. On in every profile, since the writer is the waiver authority for a draft about somebody else's decision."
+judge = "Who does the role noun name? When it is you, drop the attribution and say I, or state the fact the decision produced. When it is another person, name them and quote what they said."
+profiles = { default = "apply" }
 
 # ---------------------------------------------------------------------------
 # Family T: filler and transitions

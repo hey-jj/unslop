@@ -42,6 +42,9 @@ them of anything you wrote or rewrote.
   stop there. Keep a denial only where dropping it would cost the reader a fact.
 - Does this sentence explain why the design is right? That belongs in the build
   log or the rule guard. The reader gets what happens and what to do.
+- Does this sentence credit a decision to the owner, the author, or the user in
+  the third person? When that person is the writer, say `I` or state the fact the
+  decision produced. Nobody reports their own ruling with a date beside it.
 
 ## Profiles
 
@@ -415,6 +418,34 @@ Read the entry before editing. Two patterns have no rule and are marked as such.
    ```
    wrong: The check reads Rust shape only, which is the trade for a guard that never fires on prose.
    right: The check reads Rust shape only. Source in other languages reaches the rules as prose.
+   ```
+34. **Decision attribution.** A decision credited to a role noun in the third
+    person, in a draft the person that noun names is signing. `Owner's ruling,
+    2026-08-20`, `the maintainer's call`, `requested by the user`,
+    `owner-flagged`, `owner decision`, `per the owner`, `at the user's
+    request`, `the owner wants`, `the owner has ruled`, `in the owner's stead`,
+    `as you directed`, and a line-start `Ruling:` or `Decision (2026-08-20):` label. Two closed role
+    sets: the open roles (owner, maintainer, author, principal, proxy,
+    operator, orchestrator, human, lead, user, reviewer) take the verdict
+    forms, and the ledger roles (owner, maintainer, principal, proxy,
+    orchestrator, lead) also take the loose verbs and possessives, since those
+    are the nouns an agent uses for the person it works for. An agent drafting
+    in your name writes this way because it stands outside you and records
+    where the choice came from, and the date beside it is a ledger row. You
+    never report your own decision in the third person. Say `I`, or state the
+    fact the decision produced. When the noun names somebody else, name them
+    and quote what they said. The rule fires on ordinary English too, since
+    `the author decides` in a book review and `the user approves` in a consent
+    flow are honest sentences, and the judge question settles each one by
+    asking who the noun names in this draft. `The user asked` and `the author
+    said` stay hand-read, because they are ordinary report prose, and so does a
+    pronoun standing in for the owner (`he decided`, `her call`). Never tell a
+    reviewer to read one of these as an attributed decision and pass it. That
+    instruction is how the specimen shipped. `SLOP-V007`
+
+   ```
+   wrong: Owner's ruling, 2026-08-20: the bare word leaves the lexicon.
+   right: The bare word leaves the lexicon.
    ```
 
 ## Adding soul

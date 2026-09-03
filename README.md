@@ -49,7 +49,7 @@ unslop check --profile email message.txt
 
 ## What it looks for
 
-Ninety-three rules in twenty-two families. Ornamental and promotional vocabulary, puffery,
+Ninety-four rules in twenty-two families. Ornamental and promotional vocabulary, puffery,
 filler and transition tics, intensifiers and unquantified claims, contrast rhetoric,
 and stock attribution. Dash and colon habits, title case, boldface, and emoji. The
 chat-assistant register, verbatim self-duplication, and passive voice with the actor
