@@ -3,7 +3,7 @@
 # names. Lexicon files under words/ are canonical data referenced by rule ID.
 
 [policy]
-version = "0.1.4"
+version = "0.1.5"
 # sha256 over the canonical serialization of the whole package (sorted keys,
 # LF endings, sorted file list), computed with this field set to the empty
 # string. The build embeds the computed value in every result and snapshot.
@@ -32,13 +32,13 @@ digest = ""
 quotation_downgrade = [
   "SLOP-M001", "SLOP-M002", "SLOP-M003", "SLOP-M006",
   "SLOP-A001", "SLOP-A002", "SLOP-T001", "SLOP-I001", "SLOP-I002",
-  "SLOP-O003",
+  "SLOP-O003", "SLOP-I007",
 ]
 # Hits inside claimed-quotation regions for the rules listed below are
 # dropped at report resolution instead of downgraded: a candidate-tier rule
 # has no lower blocking state, and a quoted idiom belongs to the quoted
 # author, not the writer quoting them.
-quotation_suppress = ["SLOP-A005"]
+quotation_suppress = ["SLOP-A005", "SLOP-I008"]
 profile_names = [
   "general-writing", "blog-post", "email", "report", "doc", "social-post",
   "comment",
@@ -719,6 +719,56 @@ match = { kind = "word-set", lexicon = "words/softeners.txt", case = "insensitiv
 guard = "One softener on a claim. Off in general-writing, blog-post, social-post, and comment, where a writer hedging in their own voice is the writing and a reviewer writing that a change is a bit risky is saying what they mean. Relaxed in email, where softening is manners. Applied in report and doc, where a softened claim is a weaker claim and the reader needs to know which one they are reading. Stacked hedges are SLOP-I005 and fire everywhere."
 judge = "Take the softener out. Is the sentence now claiming more than the evidence carries?"
 profiles = { default = "apply", general-writing = "off", blog-post = "off", social-post = "off", email = "relax", comment = "off" }
+
+[[rule]]
+id = "SLOP-I007"
+name = "hedging-litotes"
+family = "intensifier"
+tier = "violation"
+lifecycle = "blocking"
+origin = "owner-mandate"
+waiver = "human-only"
+view = "norm"
+match = { kind = "regex-set" }
+patterns = [
+  '(?i)\b(not|(isn|wasn|aren|weren)[\x27\u{2019}]t)\s{1,3}(inconsiderable|unimportant|inconsequential|unfamiliar)\b',
+  '(?i)\b(no\s{1,3}(small|mean|easy)\s{1,3}feat|not\s{1,3}a\s{1,3}small\s{1,3}feat|no\s{1,3}small\s{1,3}(achievement|undertaking)|in\s{1,3}no\s{1,3}small\s{1,3}(part|measure))\b',
+  '(?i)\b(is|was|remains|proved|proves)\s{1,3}no\s{1,3}(simple|easy)\s{1,3}task\b',
+  '(?i)\b(not|(isn|wasn|aren|weren)[\x27\u{2019}]t)\s{1,3}without\s{1,3}((its|their)\s{1,3})?(challenges|difficulties|issues|problems|difficulty|irony)\b',
+  '(?i)\b((isn|wasn|aren|weren)[\x27\u{2019}]t|not)\s{1,3}exactly\s{1,3}(trivial|simple|straightforward|easy)\b',
+  '(?i)\b(far\s{1,3}from\s{1,3}(trivial|simple|easy)|hardly\s{1,3}(surprising|trivial)|less\s{1,3}than\s{1,3}stellar|leaves?\s{1,3}(something|much)\s{1,3}to\s{1,3}be\s{1,3}desired)\b',
+  '(?i)\bit\s{1,3}(would\s{1,3}not|wouldn[\x27\u{2019}]t)\s{1,3}be\s{1,3}wrong\s{1,3}to\s{1,3}say\b',
+  '(?i)\bit(\s{1,3}is|[\x27\u{2019}]s)\s{1,3}(safe\s{1,3}to\s{1,3}say|not\s{1,3}hard\s{1,3}to\s{1,3}(see|imagine))\b',
+  '(?i)\b(to\s{1,3}say\s{1,3}the\s{1,3}least|to\s{1,3}put\s{1,3}it\s{1,3}mildly)\b',
+  '(?i)\b(not|(isn|wasn|aren|weren)[\x27\u{2019}]t)\s{1,3}(rocket\s{1,3}science|(exactly\s{1,3})?a\s{1,3}walk\s{1,3}in\s{1,3}the\s{1,3}park|for\s{1,3}the\s{1,3}faint\s{1,3}of\s{1,3}heart)\b',
+  '(?i)\b(not|(isn|wasn|aren|weren)[\x27\u{2019}]t)\s{1,3}to\s{1,3}be\s{1,3}(underestimated|overlooked|taken\s{1,3}lightly|sneezed\s{1,3}at)\b',
+  '(?i),\s{0,3}not\s{1,3}to\s{1,3}mention\b',
+]
+guard = "A hedging litotes or a stock understatement, a claim carried by the negation of its opposite in place of the verdict. The set is closed, no member has an honest reading in confident prose, and the tier is violation with no judge question. The negated adjectives inconsiderable, unimportant, inconsequential, and unfamiliar behind not. The negated difficulty forms no small feat, no mean feat, no easy feat, not a small feat, no small achievement, no small undertaking, in no small part, in no small measure, and no simple task or no easy task after is, was, remains, proved, or proves. A clause-initial No simple task is a quantifier and stays silent. Not without followed by challenges, difficulties, issues, problems, difficulty, or irony. Not exactly on trivial, simple, straightforward, or easy. Far from on trivial, simple, or easy, hardly surprising, hardly trivial, less than stellar, and leaves something or much to be desired. It would not be wrong to say, it is safe to say, and it is not hard to see or imagine. To say the least, to put it mildly, not rocket science, not a walk in the park, not for the faint of heart, not to be underestimated, overlooked, taken lightly, or sneezed at, and a comma-led not to mention. Every member led by not also reads the contractions isn't, wasn't, aren't, and weren't in its place, so isn't inconsiderable, wasn't without its challenges, isn't exactly simple, isn't rocket science, isn't for the faint of heart, and isn't to be underestimated all fire. Stated misses: not impossible, not unlike, not dissimilar, not incorrect, not inaccurate, not unrelated, not indifferent, not invalid, not unavailable, not illegal, not necessarily, not always, not all, not fully, not completely, not yet, not really, a bare far from, a bare hardly, scarcely, or barely, a bare less than, a bare not without, not less than, and chose not to mention. Every adjective is listed and no prefix wildcard exists. The filler entry it goes without saying belongs to SLOP-T001. The forms that can carry a measurement, not uncommon, not entirely clear, and not terribly among them, are SLOP-I008. The span is the phrase itself, so a hit inside a contrast span reports beside the contrast rule. The writer states the claim, or names the hard steps, the failures, or the defect. The writer is the waiver authority, and the waiver is human-only, because a draft the writer signs states what the writer knows and what the writer does not know. On in every profile, since a hedge in the writer's own voice is still a claim the reader has to decode. Quoted text downgrades to candidate."
+profiles = { default = "apply" }
+
+[[rule]]
+id = "SLOP-I008"
+name = "understatement-hedge"
+family = "intensifier"
+tier = "candidate"
+lifecycle = "blocking"
+origin = "owner-mandate"
+view = "norm"
+match = { kind = "regex-set" }
+patterns = [
+  '(?i)\b(not|(isn|wasn|aren|weren)[\x27\u{2019}]t)\s{1,3}(uncommon|unusual|insignificant|unreasonable|unlikely|inexpensive|unexpected|unaware|unwelcome|incapable|irrelevant|illogical|unheard\s{1,3}of|infrequent(ly)?)\b',
+  '(?i)\b((not|(isn|wasn|aren|weren)[\x27\u{2019}]t)\s{1,3}(a\s{1,3}trivial\s{1,3}(task|matter|problem|change|exercise|undertaking)|an\s{1,3}easy\s{1,3}task|a\s{1,3}simple\s{1,3}matter|a\s{1,3}minor\s{1,3}issue)|no\s{1,3}small\s{1,3}amount)\b',
+  '(?i)\b(not|(isn|wasn|aren|weren)[\x27\u{2019}]t)\s{1,3}without\s{1,3}((its|their|a|any)\s{1,3})?(risks?|merit|value|costs?|precedent|controversy|reason|consequences)\b',
+  '(?i)\b(not|(isn|wasn|aren|weren)[\x27\u{2019}]t)\s{1,3}entirely\s{1,3}(clear|accurate|true|wrong|surprising|obvious|certain|sure)\b',
+  '(?i)\b(not|(isn|wasn|aren|weren)[\x27\u{2019}]t)\s{1,3}(exactly\s{1,3}(ideal|fast)|quite\s{1,3}(right|there|enough|ideal)|particularly|especially|overly|terribly)\b',
+  '(?i)\b(far\s{1,3}from\s{1,3}(ideal|perfect|certain|clear|settled)|less\s{1,3}than\s{1,3}(ideal|optimal))\b',
+  '(?i)\bit(\s{1,3}is|[\x27\u{2019}]s)\s{1,3}not\s{1,3}unreasonable\s{1,3}to\b',
+  '(?i)\b((not|(isn|wasn|aren|weren)[\x27\u{2019}]t)\s{1,3}the\s{1,3}(best|worst)|could\s{1,3}be\s{1,3}better|room\s{1,3}for\s{1,3}improvement)\b',
+]
+guard = "An understatement that can carry a literal measurement, ranking, or evidence gap, so every hit goes to the judge. Not before uncommon, unusual, insignificant, unreasonable, unlikely, inexpensive, unexpected, unaware, unwelcome, incapable, irrelevant, illogical, unheard of, infrequent, and infrequently. Not a trivial task, matter, problem, change, exercise, or undertaking, not an easy task, not a simple matter, not a minor issue, and no small amount. Not without followed by risk, risks, merit, value, cost, costs, precedent, controversy, reason, or consequences, with an optional its, their, a, or any between. Not entirely on clear, accurate, true, wrong, surprising, obvious, certain, or sure, not exactly ideal, not exactly fast, not quite on right, there, enough, or ideal, and not particularly, not especially, not overly, and not terribly. Far from on ideal, perfect, certain, clear, or settled, less than ideal, less than optimal, it is not unreasonable to, not the best, not the worst, could be better, and room for improvement. Every member led by not also reads the contractions isn't, wasn't, aren't, and weren't in its place, so isn't quite right, isn't entirely clear, aren't uncommon, isn't without merit, and wasn't terribly fragmented all fire. Not the best and not the worst read the compound too, so not the best-effort transport and not the worst-case bound fire and reach the judge question, where the compound is the answer. Honest readings exist. Not uncommon beside a measured rate is a literal statement about frequency, not the best beside a rank is a literal statement about order, and not entirely clear beside a named gap is a literal statement about evidence. The judge question asks for that number or gap, and the writer answers it, since the writer knows whether the number exists. Stated misses match SLOP-I007: not impossible, not unlike, not dissimilar, not incorrect, not inaccurate, not unrelated, not indifferent, not invalid, not unavailable, not illegal, not necessarily, not always, not all, not fully, not completely, not yet, not really, and the bare far from, hardly, scarcely, barely, less than, and not without. Every adjective is listed and no prefix wildcard exists. The fixed forms with no honest reading are SLOP-I007. Relaxed in comment and social-post, where a short reply saying a patch is not quite right is a person talking and the thread can ask for the number. Applied everywhere else, where the reader has no channel to ask. Quoted text drops through quotation_suppress, since a quoted author's hedge belongs to the quotation."
+judge = "Does the sentence carry the count, rate, threshold, rank, or named gap that makes the negation literal? If the direct rewrite changes no number and no action, write the direct form."
+profiles = { default = "apply", comment = "relax", social-post = "relax" }
 
 # ---------------------------------------------------------------------------
 # Family C: contrast rhetoric

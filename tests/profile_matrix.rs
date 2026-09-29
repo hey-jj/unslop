@@ -181,11 +181,11 @@ fn known_matrix_points() {
     );
 }
 
-/// The comment profile in full: eleven rules move and nothing else does.
+/// The comment profile in full: twelve rules move and nothing else does.
 /// A thread reply is stricter than email wherever the assistant register is
 /// in play and softer wherever the writer's own voice is.
 #[test]
-fn the_comment_profile_moves_eleven_rules() {
+fn the_comment_profile_moves_twelve_rules() {
     let pkg = policy::load().unwrap();
     let rule = |id: &str| pkg.rule_by_id(id).unwrap();
     let c = Profile::Comment;
@@ -194,6 +194,7 @@ fn the_comment_profile_moves_eleven_rules() {
         "SLOP-A008",
         "SLOP-M006",
         "SLOP-S005",
+        "SLOP-I008",
         "SLOP-E002",
         "SLOP-F002",
         "SLOP-F004",
@@ -205,7 +206,7 @@ fn the_comment_profile_moves_eleven_rules() {
     }
     assert_eq!(rule("SLOP-X003").stance(c), Stance::Apply);
 
-    // Every other rule reads its default in comment, so the eleven above are
+    // Every other rule reads its default in comment, so the twelve above are
     // the whole of the profile. Anything else moving is drift. I006 is off in
     // general-writing too and so does not show up as a difference.
     let moved: Vec<&str> = pkg
@@ -220,6 +221,7 @@ fn the_comment_profile_moves_eleven_rules() {
             "SLOP-A008",
             "SLOP-M006",
             "SLOP-S005",
+            "SLOP-I008",
             "SLOP-E002",
             "SLOP-F002",
             "SLOP-F004",
@@ -293,10 +295,10 @@ fn the_renamed_profile_answers_to_one_name() {
 #[test]
 fn tier_counts_are_pinned() {
     let pkg = policy::load().unwrap();
-    assert_eq!(pkg.rules.len(), 94);
+    assert_eq!(pkg.rules.len(), 96);
     let count = |t: Tier| pkg.rules.iter().filter(|r| r.tier == t).count();
-    assert_eq!(count(Tier::Violation), 22);
-    assert_eq!(count(Tier::Candidate), 65);
+    assert_eq!(count(Tier::Violation), 23);
+    assert_eq!(count(Tier::Candidate), 66);
     assert_eq!(count(Tier::CoverageHint), 7);
 }
 

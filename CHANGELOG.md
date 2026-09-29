@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.1.5] - 2026-09-29
+
+### Added
+
+- `SLOP-I007` hedging-litotes, a violation in the intensifier family with no
+  judge question and a human-only waiver, on in every profile. It reports the
+  closed set of hedging litotes and stock understatements that have no honest
+  reading in confident prose: the negated adjectives behind `not` (`not
+  inconsiderable`, `not unimportant`, `not inconsequential`, `not unfamiliar`),
+  the negated difficulty forms (`no small feat`, `no mean feat`, `in no small
+  part`, `was no simple task`), the negated privations (`not without its
+  challenges`), the partial negations on an ease word (`not exactly trivial`,
+  `isn't exactly simple`), the distance forms (`far from
+  trivial`, `hardly surprising`, `less than stellar`, `leaves something to be
+  desired`), the conditional frames (`it would not be wrong to say`, `it is
+  safe to say`, `it is not hard to see`), and the stock understatements (`to
+  say the least`, `to put it mildly`, `not rocket science`, `not a walk in the
+  park`, `not for the faint of heart`, `not to be underestimated`, a comma-led
+  `not to mention`). Every member led by `not` also reads `isn't`, `wasn't`,
+  `aren't`, and `weren't` in its place. Every adjective is listed and no prefix wildcard exists,
+  so `not impossible`, `not unlike`, `not incorrect`, `not necessarily`, `not
+  yet`, a bare `far from`, and a bare `hardly` stay silent. A clause-initial
+  `No simple task` is a quantifier and stays silent. The span is the phrase
+  itself. Quoted text downgrades to candidate. `it goes without saying` stays
+  with `SLOP-T001`.
+- `SLOP-I008` understatement-hedge, a candidate in the intensifier family. It
+  reports the understatements that can carry a literal count, rate, threshold,
+  rank, or evidence gap: `not uncommon` and eleven other negated adjectives,
+  `not unheard of`, `not infrequently`, `not a trivial undertaking`, `no small
+  amount`, `not without merit`, `not entirely clear`, `not exactly ideal`, `not
+  quite right`, `not particularly`, `not terribly`, `far from ideal`, `less
+  than ideal`, `it is not unreasonable to`, `not the best`, `could be better`,
+  and `room for improvement`, with the same contractions in place of `not`.
+  `not the best-effort transport` fires on the compound and reaches the judge
+  question. The judge question asks for the number or the named gap that
+  makes the negation literal. Relaxed to advisory in `comment` and
+  `social-post`, where the thread can ask for the number. Quoted text drops.
+- The skill gains the shape as pattern 35 under a new Confidence heading, with
+  a table of direct rewrites, and a fourth question for the writer's own
+  sentences.
+
 ## [0.1.4] - 2026-09-02
 
 ### Added

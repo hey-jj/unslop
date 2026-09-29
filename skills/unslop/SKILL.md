@@ -35,7 +35,7 @@ means, so run them together every time.
    clear a blocking candidate. That takes the human waiver path below.
 7. Read the final draft once more for the tells no rule catches, listed at the end.
 
-Two questions belong to your own sentences, not to the draft you were handed. Ask
+Four questions belong to your own sentences, not to the draft you were handed. Ask
 them of anything you wrote or rewrote.
 
 - Does this sentence deny something nobody claimed? Say what the thing does and
@@ -45,6 +45,9 @@ them of anything you wrote or rewrote.
 - Does this sentence credit a decision to the owner, the author, or the user in
   the third person? When that person is the writer, say `I` or state the fact the
   decision produced. Nobody reports their own ruling with a date beside it.
+- Does this sentence hedge through a negation, `no small feat`, `not uncommon`,
+  `not entirely clear`? State the claim, or give the number or the gap that makes
+  the negation literal. You know X or you do not know X. Say which.
 
 ## Profiles
 
@@ -447,6 +450,43 @@ Read the entry before editing. Two patterns have no rule and are marked as such.
    wrong: Owner's ruling, 2026-08-20: the bare word leaves the lexicon.
    right: The bare word leaves the lexicon.
    ```
+
+### Confidence
+
+35. **Hedging litotes and deliberate understatement.** A claim carried by the
+    negation of its opposite, or a stock understatement in place of the verdict.
+    `no small feat`, `not without its challenges`, `far from trivial`, `hardly
+    surprising`, `not exactly simple`, `leaves something to be desired`, `to say
+    the least`, `not uncommon`, `not entirely clear`, `less than ideal`, `not the
+    best`. Two closed sets. The fixed forms are `SLOP-I007`, a violation with no
+    judge question and a human-only waiver, since no member has an honest
+    reading in confident prose. The measurable forms are `SLOP-I008`, a candidate
+    whose judge question asks for the count, rate, rank, or named gap that makes
+    the negation literal, relaxed in `comment` and `social-post` where the thread
+    can ask for the number. An opinion is a verdict and an unknown is a fact. You
+    know X, or you do not know X, and the sentence says which. Honest negations
+    stay silent under both rules and stay honest on the reread: `not impossible`
+    in a proof, `not unlike` in a comparison, `not incorrect` in a code review,
+    `not yet`, `not always`, `not all`, and a bare `far from` or `hardly`. A
+    hedging negation the two lists miss is the same shape and is hand-read.
+
+   ```
+   wrong: It is not entirely clear why the test flakes, and fixing it was no simple task.
+   right: We do not know why the test flakes. The fix took three passes over the retry loop.
+   ```
+
+    | Wrong | Right |
+    |---|---|
+    | `not uncommon` | `common`, or the measured rate |
+    | `no simple task` | name the hard steps |
+    | `not without its challenges` | name the failures or costs |
+    | `not entirely clear` | `We do not know X.` |
+    | `far from trivial` | name the affected components |
+    | `hardly surprising` | `We expected this.` |
+    | `less than ideal` | name the defect |
+    | `it would not be wrong to say` | state the claim |
+    | `leaves something to be desired` | name the defect |
+    | `not the best` | give the rank |
 
 ## Adding soul
 
