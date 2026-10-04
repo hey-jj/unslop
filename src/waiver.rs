@@ -5,28 +5,28 @@ use crate::WaiverAuthority;
 use serde::{Deserialize, Serialize};
 
 /// The only `signer_kind` string that carries human privilege. Any other
-/// value — including an absent one — is untrusted (agent-equivalent). This is
+/// value, including an absent one, is untrusted (agent-equivalent). This is
 /// a fail-closed reading: a waiver is trusted to clear a human-only rule only
 /// when it explicitly names the recognized human signer.
 pub const HUMAN_SIGNER: &str = "human";
 
-/// The single authority-floor decision, consulted by both `analyze` (through
-/// `report::waiver_decision`) and [`verify`] so the two paths cannot
-/// drift. Returns `Ok(())` when a waiver with `signer_kind` may clear
-/// `rule_id` under `authority`, or `Err(reason)` when the floor forbids it.
+/// The single authority-floor check serves both `analyze`, through
+/// `report::waiver_decision`, and [`verify`] so the paths cannot drift.
+/// Return `Ok(())` when a waiver with `signer_kind` may clear `rule_id` under
+/// `authority`. Return `Err(reason)` when the floor forbids it.
 ///
-/// The floor no configuration and no orchestrator-agent signature can lower:
+/// Every configuration and every agent signature must respect these limits:
 ///
-/// * `instrumentation_error` and `unsupported_input` are fail-closed states,
-///   never waivable by anyone.
-/// * A human-only rule (`human_only == true`, i.e. the ornamental set) and
-///   `SLOP-J001` are clearable only by a human-signed waiver.
-/// * Every other rule is agent-waivable only when `authority` is
-///   `OrchestratorAgent`; otherwise it too needs a human signer.
+/// * `instrumentation_error` and `unsupported_input` remain blocking under
+///   every waiver.
+/// * A rule with `human_only == true`, including the ornamental set, and
+///   `SLOP-J001` each require a human-signed waiver.
+/// * Every other rule accepts agent waivers only under `OrchestratorAgent`
+///   authority. Other authority settings require a human signer.
 ///
-/// The signer is read fail-closed: only the exact [`HUMAN_SIGNER`] string is
-/// human-privileged. An absent or unrecognized `signer_kind` is untrusted and
-/// gets at most agent privilege, so it can never clear the human-only floor.
+/// Read signer identity fail-closed. Only the exact [`HUMAN_SIGNER`] string
+/// has human privilege. An absent or unrecognized `signer_kind` is untrusted
+/// and gets at most agent privilege. It can never clear the human-only floor.
 pub fn floor_allows(
     signer_kind: Option<&str>,
     rule_id: &str,
@@ -167,11 +167,11 @@ pub fn parse_rfc3339(s: &str) -> Option<i64> {
     Some(days * 86_400 + hour * 3600 + minute * 60 + second - offset_secs)
 }
 
-/// Verify a payload against an approval record. An approval must be EARNED,
-/// not merely byte-matching: alongside the tuple checks (hash, policy digest,
-/// profile, waiver expiry, and the authority floor) `verify` RE-RUNS the
-/// analysis under the approval's declared profile with the approval's waiver
-/// set, and fails closed if any unwaived blocking finding remains.
+/// Verify a payload against an approval record. Alongside the tuple checks
+/// (hash, policy digest, profile, waiver expiry, and the authority floor),
+/// `verify` re-runs the analysis under the approval's declared profile with
+/// the approval's waiver set, and fails closed if any unwaived blocking
+/// finding remains.
 ///
 /// The re-analysis routes through the same [`crate::analyze`] entry point and
 /// the same [`floor_allows`] floor the interactive path uses, so a byte-clean

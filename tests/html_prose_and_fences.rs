@@ -9,9 +9,9 @@
 //!     trailing `\s+` (Q001's original shape) cannot make the
 //!     overlapping adapter quadratic (unit-tested in engine.rs).
 //!   - reader-visible text inside an HTML block is extracted in source
-//!     coordinates and scanned as prose; slop there blocks, legitimate HTML
+//!     coordinates and scanned as prose. Slop there blocks, legitimate HTML
 //!     text stays clean, and a word split across inline tags still resolves.
-//!   - pulldown-cmark enforces fence-close-length itself; separate
+//!   - pulldown-cmark enforces fence-close-length itself. Separate
 //!     open-length tracking is inert.
 
 mod common;
@@ -30,7 +30,7 @@ fn filler() -> String {
 #[test]
 fn closed_multiline_comment_is_not_a_structural_anomaly() {
     // The canonical victim: a multi-line markdownlint directive block. pulldown
-    // emits it as one Html event per line; parsing each line in isolation saw
+    // emits it as one Html event per line. Parsing each line in isolation saw
     // `<!--` with no `-->` and fired M005 plus a per-line Y002. Joined, it is a
     // normal closed comment.
     let text = format!(
@@ -82,7 +82,7 @@ fn unclosed_multiline_comment_at_eof_still_raises_m005() {
 
 #[test]
 fn trailing_whitespace_run_is_not_quadratic() {
-    // Q001's shipped pattern ends in `\?\s+`; a "The catch?" prefix followed by
+    // Q001's shipped pattern ends in `\?\s+`. A "The catch?" prefix followed by
     // a long whitespace run manufactured a match end at every whitespace byte,
     // each an O(region) reverse scan (measured 10.66s at 256K when unbounded). Bounded
     // whitespace caps the reverse window and the match-end count.
@@ -110,9 +110,9 @@ fn trailing_whitespace_run_is_not_quadratic() {
 
 #[test]
 fn slop_inside_html_block_is_scanned_and_blocks() {
-    // `<div>We delve into game-changing synergy</div>` was an evasion channel:
-    // exit 0. The visible text is now prose, so the banned word and the
-    // game-changer cliché both fire and the document has a violation.
+    // `<div>We delve into game-changing synergy</div>` was an evasion
+    // channel: exit 0. The visible text is now prose, so the banned word and
+    // the `game-changer` cliché both fire and the document has a violation.
     let text = format!(
         "{f}\n\n<div>We delve into game-changing synergy</div>\n\n{f}\n",
         f = filler()
@@ -135,8 +135,8 @@ fn slop_inside_html_block_is_scanned_and_blocks() {
 
 #[test]
 fn delve_span_is_the_actual_source_trigger() {
-    // Coordinate discipline: the reported span is true source bytes of the word
-    // that renders, not a fabricated snippet.
+    // Coordinate discipline: the reported span is true source bytes of the
+    // word that renders.
     let text = format!(
         "{f}\n\n<div>We delve into detail here.</div>\n",
         f = filler()
@@ -191,9 +191,10 @@ fn details_block_with_plain_text_stays_clean() {
 
 #[test]
 fn banned_word_split_across_inline_tags_resolves() {
-    // In the rendered page `de<b></b>lve` reads "delve"; the norm view fuses the
-    // visible runs so the word set still matches. The span covers the trigger
-    // (tags included) — an honest span, not a fabricated "delve".
+    // In the rendered page `de<b></b>lve` reads `"delve"`. The norm view
+    // fuses the visible runs so the word set still matches. The span covers
+    // the trigger (tags included). It uses source bytes and never fabricates
+    // `"delve"`.
     let text = format!(
         "{f}\n\n<div>de<b></b>lve into the specifics</div>\n",
         f = filler()
@@ -215,15 +216,15 @@ fn banned_word_split_across_inline_tags_resolves() {
 
 #[test]
 fn non_ascii_lowercasing_char_in_html_holds_coordinates() {
-    // U+0130 (İ) lowercases to TWO code points (i + combining dot, three bytes
-    // vs two), so lowercasing the slice to find tag/text offsets would shift
-    // every following byte by one. The length-changing char sits in the VISIBLE
-    // text immediately before the trigger with NO ASCII slack between them, so a
-    // reintroduced `to_lowercase` on the slice would push `delve`'s computed
-    // offset off by one and this exact-span assertion would fail. The tokenizer
-    // scans original bytes and keeps source coordinates, so the span lands on
-    // the trigger. A trailing İ before the closing tag exercises the same past
-    // the match.
+    // U+0130 (İ) lowercases to two code points (U+0069 plus a combining dot,
+    // three bytes vs two), so lowercasing the slice to find tag/text offsets
+    // would shift every following byte by one. The length-changing char sits
+    // in the visible text directly before the trigger with no ASCII slack
+    // between them, so a reintroduced `to_lowercase` on the slice would push
+    // `delve`'s computed offset off by one and this exact-span assertion
+    // would fail. The tokenizer scans original bytes and keeps source
+    // coordinates, so the span lands on the trigger. A trailing İ before the
+    // closing tag exercises the same past the match.
     let text = format!(
         "{f}\n\n<div>İ delve into the İ tapestry</div>\n",
         f = filler()

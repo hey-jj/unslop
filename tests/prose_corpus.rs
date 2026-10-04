@@ -1,5 +1,5 @@
 //! Golden corpus. Three short documents written for this crate, each
-//! carrying patterns on purpose, each pinned to the exact set of rules it
+//! carrying patterns, each pinned to the exact set of rules it
 //! raises. A change in any rule that moves one of these lists has to be
 //! looked at and either accepted here or fixed there.
 
@@ -77,8 +77,9 @@ fn blog_fragment_is_stable() {
             "SLOP-E004",
             "SLOP-E005",
             "SLOP-I002",
-            // empowers and unlock report, full potential and seamless block:
-            // the ornamental set splits on whether a plain sense survives.
+            // `empowers` and `unlock` report. `full potential` and `seamless`
+            // block. The ornamental set splits on whether a plain sense
+            // survives.
             "SLOP-A010",
             "SLOP-A010",
             "SLOP-A001",
@@ -93,8 +94,8 @@ fn blog_fragment_is_stable() {
     assert_eq!(report.result_state, "violations_present");
 }
 
-/// Every fixture holds the span and segmentation invariants under every
-/// profile, not only its own.
+/// Every fixture must preserve span and segmentation invariants under every
+/// profile.
 #[test]
 fn fixtures_hold_invariants_under_every_profile() {
     for name in ["essay-excerpt.md", "email.md", "blog-fragment.md"] {

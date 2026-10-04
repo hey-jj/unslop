@@ -1,6 +1,6 @@
 # SLOP-A006 puffery. Blocking set. Multi-word claims about significance that
-# state nothing checkable. Four of the owner's named puffery terms live in
-# other rules and are not repeated here: pivotal moment is SLOP-I002
+# state nothing checkable. This lexicon excludes four puffery terms held by
+# other rules: pivotal moment is SLOP-I002
 # (pivotal), testament to is SLOP-A001 (testament), evolving landscape is
 # SLOP-A002 (landscape), and indelible mark is SLOP-O001.
 setting the stage for

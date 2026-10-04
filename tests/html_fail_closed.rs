@@ -5,16 +5,16 @@
 //!     full source: a non-ASCII byte before a heading cannot drag a
 //!     heading finding's span end +1.
 //!   - a closing fence's indentation is capped at 3 spaces (CommonMark), so a
-//!     4-space-indented ``` at EOF does NOT close the block — the slop tail
+//!     4-space-indented ``` at EOF does not close the block, the slop tail
 //!     fails closed instead of being swallowed as code.
 //!   - numeric character references (`&#DDD;` / `&#xHH;`) decode
 //!     arithmetically, so `&#100;elve` cannot hide a word.
 //!   - a hyphen is part of a tag name, so `<code-sample>` parses as an
-//!     ordinary unknown block element whose body IS scanned.
+//!     ordinary unknown block element whose body is scanned.
 //!   - the enumerated constructs the hand-rolled tokenizer cannot render-
 //!     faithfully parse (`<![CDATA[` outside a comment, `--!>`, a self-closing
 //!     SKIP_BODY element, `<template>`) fail closed as an M005 anomaly, while
-//!     ordinary custom elements and realistic HTML do NOT anomaly-flag.
+//!     ordinary custom elements and realistic HTML do not anomaly-flag.
 //!   - the raw-HTML-dominance metric counts only genuine markup bytes: the
 //!     reader-visible HTML text scanned as prose is subtracted, so an
 //!     idiomatic HTML-using README does not trip the 20% threshold.
@@ -53,7 +53,7 @@ fn non_ascii_before_a_heading_keeps_the_exact_word_span() {
 #[test]
 fn fence_close_indented_four_spaces_does_not_close() {
     // A ```-opened fence, code, a slop line, then a 4-space-indented ``` at EOF.
-    // CommonMark caps a closing fence at 3 spaces, so this does NOT close: the
+    // CommonMark caps a closing fence at 3 spaces, so this does not close: the
     // block runs to EOF unclosed and M005 fires (the slop tail is not swallowed).
     let text = format!(
         "{f}\n\n```\ncode\ndelve game-changer\n    ```\n",
@@ -69,9 +69,9 @@ fn fence_close_indented_four_spaces_does_not_close() {
 
 #[test]
 fn fence_close_indented_three_spaces_still_closes() {
-    // The same shape with a 3-space indent: a valid close. The fence closes, so
-    // the trailing "delve game-changer" is ordinary prose (A001) and there is no
-    // unclosed-fence M005.
+    // The same shape with a 3-space indent: a valid close. The fence closes,
+    // so the trailing `"delve game-changer"` is ordinary prose (A001) and
+    // there is no unclosed-fence M005.
     let text = format!(
         "{f}\n\n```\ncode\n   ```\n\ndelve game-changer here.\n",
         f = filler()
@@ -129,7 +129,7 @@ fn bare_or_malformed_numeric_ref_stays_literal() {
 #[test]
 fn hyphenated_custom_element_body_is_scanned() {
     // `<code-sample>` must not be misread as `<code>` (whose body is skipped as
-    // code); its body is ordinary visible text and IS scanned.
+    // code). Its body is ordinary visible text and is scanned.
     let text = format!(
         "{f}\n\n<div><code-sample>delve game-changer</code-sample></div>\n",
         f = filler()
@@ -175,7 +175,7 @@ fn unparseable_constructs_fail_closed_as_anomaly() {
     }
 }
 
-// Guardrail — ordinary custom elements and realistic HTML do NOT flag,
+// Guardrail, ordinary custom elements and realistic HTML do not flag,
 // and slop inside them is still scanned.
 
 #[test]
@@ -187,7 +187,7 @@ fn ordinary_elements_do_not_anomaly_flag() {
         "<table>\n<tr><td>cell one text</td><td>cell two text</td></tr>\n</table>",
         "Inline <i>italic</i> and <b>bold</b> and <code>snippet</code> text.",
         "<div align=\"center\"><img src=\"x.png\"/></div>",
-        // CDATA INSIDE a comment must not trip the CDATA anomaly.
+        // CDATA inside a comment must not trip the CDATA anomaly.
         "<!-- <![CDATA[ x ]]> harmless -->",
     ];
     for src in benign {
@@ -220,10 +220,10 @@ fn slop_inside_ordinary_custom_element_is_still_scanned() {
 #[test]
 fn tab_indented_list_item_comment_is_not_split() {
     // pulldown emits a zero-range whitespace Text event between the wrapped
-    // lines of this tab-indented comment; unguarded it split the comment,
-    // hiding it from Y001 and leaking the tail (delve/game-changer) to a prose
-    // scan (A001) plus a spurious unclosed-comment M005. Guarded, the comment
-    // stays whole: Y001 fires, no M005, no A001 leak.
+    // lines of this tab-indented comment. Unguarded it split the comment,
+    // hiding it from Y001 and leaking the tail (`delve`/`game-changer`) to a
+    // prose scan (A001) plus a spurious unclosed-comment M005. Guarded, the
+    // comment stays whole: Y001 fires, no M005, no A001 leak.
     let text = format!(
         "{f}\n\n- <!-- ordinary hidden note\n\tdelve game-changer -->\n- visible item\n",
         f = filler()
@@ -252,7 +252,7 @@ fn tab_indented_list_item_comment_is_not_split() {
 fn html_visible_text_is_not_counted_toward_raw_dominance() {
     // A doc dominated by an HTML feature table whose cells are mostly visible
     // text. Counting the whole table toward raw-HTML dominance would trip
-    // the 20% threshold; counting only the tag bytes keeps it under, so a
+    // the 20% threshold. Counting only the tag bytes keeps it under, so a
     // no-slop table doc passes.
     let text = "# Feature Matrix\n\nA short intro paragraph that explains the project in plain prose here.\n\n<table>\n<tr><td>Reads the input file carefully and validates every record before use</td></tr>\n<tr><td>Writes the output records in a stable deterministic order on every run</td></tr>\n<tr><td>Handles many of the common text formats that projects already use daily</td></tr>\n<tr><td>Runs on every supported platform without extra configuration or setup work</td></tr>\n<tr><td>Reports clear errors with the exact line and column where a problem occurs</td></tr>\n<tr><td>Ships with thorough documentation and a friendly quick start guide for you</td></tr>\n</table>\n\n## Closing\n\nA short closing paragraph in plain prose so the document is not entirely table.\n";
     let report = run(text, Profile::Doc);

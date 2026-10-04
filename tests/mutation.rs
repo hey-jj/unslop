@@ -64,7 +64,7 @@ fn crlf_and_soft_break_variants_are_caught() {
 
 #[test]
 fn markdown_escape_resolution_reaches_patterns() {
-    // \* escapes resolve in norm; an escaped semicolon entity still lands.
+    // \* escapes resolve in norm. An escaped semicolon entity still lands.
     let text = "Escaped \\*star\\* and one&semi; two.\n";
     let report = run(text, Profile::Doc);
     assert!(has_rule(&report, "SLOP-M002"));

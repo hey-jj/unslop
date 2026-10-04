@@ -14,9 +14,9 @@ use super::sentence::{blocks, find_word, param_words, push_norm_hit, sentences};
 
 pub const HANDLED: &[&str] = &["SLOP-O007", "SLOP-O008"];
 
-/// A capitalized token that names a date rather than an outlet. A weekday or
-/// a month is capitalized in every sentence that has one and never belongs to
-/// the list this rule counts.
+/// A capitalized token that names a date. A weekday or a month is capitalized
+/// in every sentence that has one and never belongs to the list this rule
+/// counts.
 const CALENDAR: &[&str] = &[
     "monday",
     "tuesday",
@@ -66,9 +66,9 @@ fn capitalized_items(slice: &str) -> usize {
     items
 }
 
-/// True when the block reads as a sign-off rather than as writing: it opens
-/// with a valediction or byline term, or it is a short line with no sentence
-/// punctuation, which is what a name on its own line looks like.
+/// True when the block is a sign-off: it opens with a valediction or byline
+/// term, or it is a short line with no sentence punctuation, which is what a
+/// name on its own line looks like.
 fn is_signoff(block: &str, valedictions: &[String]) -> bool {
     let trimmed = block.trim();
     if trimmed.is_empty() {
@@ -148,7 +148,7 @@ pub fn evaluate(
             .map(|t| t.to_ascii_lowercase())
             .collect();
         // The valediction lexicon belongs to SLOP-S004, and reading it here
-        // keeps one list rather than two. A sign-off after the ending does
+        // uses the same list in both rules. A sign-off after the ending does
         // not move where the ending is.
         let valedictions: Vec<String> = cp
             .pkg

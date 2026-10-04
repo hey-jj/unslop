@@ -3,7 +3,7 @@
 //! checking them. This test reads every `guard` and `judge` string out of the
 //! loaded package and fails the run on the mechanical writing classes.
 //!
-//! The scope is by field on purpose. Patterns, match tables, words, and
+//! The scope is by field. Patterns, match tables, words, and
 //! lexicons are never read, so a regex literal or a lexicon entry cannot raise
 //! a finding and no exemption has to be written to excuse one. The gate simply
 //! never sees them.
@@ -38,10 +38,9 @@ const SCAFFOLDING: &[&str] = &[
 ];
 
 /// Every literal term the package declares: resolved lexicon entries, inline
-/// words, exemption collocations, and every string sitting in a rule's params.
-/// This is the mention set, and it is built from the package rather than from
-/// the files so it can never fall out of step with what the rules actually
-/// load.
+/// words, exemption collocations, and every string sitting in a rule's
+/// params. This is the mention set, and it uses the loaded package so it can
+/// never fall out of step with what the rules actually load.
 fn declared_terms(pkg: &policy::PolicyPackage) -> BTreeSet<String> {
     fn walk(v: &toml::Value, out: &mut BTreeSet<String>) {
         match v {
@@ -147,9 +146,9 @@ fn every_guard_and_judge_string_passes_the_mechanical_classes() {
     );
 }
 
-/// The negative control. A synthetic guard carrying one instance of each class
-/// goes through the same function and has to come back with all of them, so a
-/// green run above means the gate looked rather than that it cannot see.
+/// The negative control sends one instance of each mechanical class through
+/// the same scan. Each must appear in the result so the test checks detection
+/// as well as clean prose.
 #[test]
 fn the_gate_catches_a_synthetic_guard() {
     let pkg = policy::load().unwrap();

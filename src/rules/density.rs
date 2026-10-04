@@ -84,10 +84,9 @@ pub fn evaluate(
         }
     }
 
-    // Rate instruments, not gates: SLOP-C009 over the contrast family and
-    // SLOP-L002 over the agentive passive. No threshold param by design, the
-    // absence being the deferred per-profile probe. Zero hits emit nothing,
-    // since an all-zero line is noise.
+    // SLOP-C009 reports contrast rates and SLOP-L002 reports agentive-passive
+    // rates as advisory hints. Thresholds await a per-profile corpus
+    // measurement. Zero hits emit no rate finding because an all-zero line is noise.
     for (id, unit) in [
         ("SLOP-C009", "contrast hits"),
         ("SLOP-L002", "passive hits"),

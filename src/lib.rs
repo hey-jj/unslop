@@ -1,5 +1,5 @@
-//! Deterministic detector and coverage instrument for the patterns that mark
-//! writing as machine-generated.
+//! A deterministic linter for formulaic writing patterns with counts for each
+//! rule family.
 //!
 //! The library performs no I/O and no clock reads. `analyze` is a pure
 //! function of `(input, config, policy)`. The embedded policy package is the
@@ -7,8 +7,8 @@
 //!
 //! `analyze` returns an error for input shaped like a Rust source file. The
 //! test reads Rust shape only, so wrap code in a fenced block or pass the
-//! prose alone, and see [`input::source_shape`] for the thresholds and the
-//! full scope statement.
+//! prose alone. See [`input::source_shape`] for thresholds and the full scope
+//! statement.
 //!
 //! See also: ai-slop gates the prose a code repository ships, and
 //! slop-detector reads text someone sent you.
@@ -198,20 +198,19 @@ pub enum Stance {
     Off,
 }
 
-/// Analyze one document. Never panics on any input.
+/// Analyze one document without panicking on any input.
 pub fn analyze(input: &[u8], config: &Config) -> Result<Report, AnalysisError> {
     validate_config(config)?;
     let compiled = engine::compiled()
         .map_err(|e| AnalysisError::Instrumentation(format!("policy load failed: {e}")))?;
     let prepared = input::prepare(input, config)?;
     let doc = extract::build_doc(&prepared, config)?;
-    // Every profile here reads prose, and a source file is not prose. Gating
-    // one draws findings from statement punctuation rather than from writing,
-    // so the boundary fails closed instead. The prose and code split is the
-    // extractor's own: backtick fences, tilde fences, and indented blocks are
-    // all code, so a document that quotes code stays a document. The test
-    // reads Rust shape only. Source in another language reaches the rules and
-    // produces findings a reader discounts.
+    // Every profile reads prose. The source-shape guard fails closed on Rust
+    // source files because statement punctuation would reach writing rules.
+    // The extractor treats backtick fences, tilde fences, and indented blocks
+    // as code, so documents quoting code remain valid. The guard reads Rust
+    // shape only. Source in another language reaches the rules and produces
+    // syntax findings that readers must discount.
     let code_blocks: Vec<Range<usize>> = doc
         .regions
         .iter()
@@ -254,7 +253,7 @@ fn validate_config(config: &Config) -> Result<(), AnalysisError> {
     }
     // Waivers are span-bound and expiring. A span-less waiver would
     // blanket every finding of its rule and a non-expiring one would never
-    // lapse, so both are rejected here — the single choke point covering the
+    // lapse, so both are rejected here, the single choke point covering the
     // CLI --waivers path and approval-embedded waivers alike.
     for w in &config.waivers {
         if w.span.is_none() || w.expires.is_none() {
@@ -291,12 +290,12 @@ pub fn policy_digest() -> String {
 }
 
 /// The span a whole-document finding reports: the first character of the
-/// payload, or an empty span when there is no payload. A rule that speaks
-/// about the document rather than about a place in it still has to hand back
-/// a span, and the reported span has to sit on character boundaries like every
-/// other. Taking one byte was wrong the moment a document opened on anything
-/// outside ASCII, which a leading emoji, an em dash, and an accented letter
-/// all do, and the span invariant then failed the whole run closed.
+/// payload, or an empty span when there is no payload. A rule about the whole
+/// document still has to return a span, and the reported span has to sit on
+/// character boundaries like every other. Taking one byte was wrong the
+/// moment a document opened on anything outside ASCII, which a leading emoji,
+/// an em dash, and an accented letter all do, and the span invariant then
+/// failed the whole run closed.
 pub(crate) fn first_char_span(s: &str) -> Range<usize> {
     0..s.chars().next().map(char::len_utf8).unwrap_or(0)
 }

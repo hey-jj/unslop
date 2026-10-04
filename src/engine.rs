@@ -28,19 +28,18 @@ pub struct Hit {
     /// For word-set and regex hits, the exact text the pattern matched in its
     /// haystack (the norm view for norm-scope rules, the source otherwise).
     /// The trigger-fidelity invariant re-renders the finding's reported
-    /// source slice and checks it still carries this trigger, so a mapping bug
-    /// fails closed as an instrumentation error rather than surfacing a finding
-    /// at the wrong bytes. `None` for structural checks that carry no trigger.
+    /// source slice and checks it still carries this trigger, so a mapping
+    /// bug fails closed with an instrumentation error. `None` for structural
+    /// checks that carry no trigger.
     pub trigger: Option<String>,
-    /// For a hit found in a DECODED link destination, the
-    /// parser-decoded text of the region the span maps into. Trigger fidelity
-    /// verifies the
-    /// trigger against THIS text — exact pulldown semantics — because the raw
+    /// For a hit found in a decoded link destination, the parser-decoded text
+    /// of the region the span maps into. Trigger fidelity verifies the
+    /// trigger against THIS text, exact pulldown semantics, because the raw
     /// spelling may hide the trigger behind references outside the crate's
-    /// enumerated entity table (`&lowbar;`, `&period;`), which the
-    /// render_key bridge cannot resolve: routing such a hit through
-    /// render_key aborted the whole report as an instrumentation error
-    /// (exit 30) on exactly the inputs the decoded scan exists to catch.
+    /// enumerated entity table (`&lowbar;`, `&period;`), which the render_key
+    /// bridge cannot resolve: routing such a hit through render_key aborted
+    /// the whole report as an instrumentation error (exit 30) on exactly the
+    /// inputs the decoded scan exists to catch.
     pub decoded: Option<String>,
     /// Instrument figure appended to the finding message (never a trigger:
     /// it does not exist in the source, so it must not enter the
@@ -69,9 +68,9 @@ struct RxMeta {
     trim_start: usize,
     trim_end: usize,
     /// The pattern begins/ends with `\b`. The DFA matched the ASCII
-    /// `(?-u:\b)` prefilter form; the edge is re-validated against the real
+    /// `(?-u:\b)` prefilter form. The edge is re-validated against the real
     /// Unicode word-boundary rule (`is_xid_continue` XOR across the edge)
-    /// before the hit is accepted, so an ASCII boundary INSIDE a non-ASCII
+    /// before the hit is accepted, so an ASCII boundary inside a non-ASCII
     /// token ("éwhy") cannot fire. Interior `\b` occurrences stay ASCII-only:
     /// their match positions are unrecoverable from the DFA, and every policy
     /// pattern is ASCII around interior boundaries.
@@ -97,7 +96,7 @@ pub struct CompiledPolicy {
 }
 
 /// Per-call scratch caches for the lazy DFAs. The compiled machines are
-/// shared; the caches are created once per analysis.
+/// shared. The caches are created once per analysis.
 pub struct RxCaches {
     fwd: Cache,
     rev: Cache,
@@ -118,13 +117,13 @@ pub fn compiled() -> Result<&'static CompiledPolicy, String> {
     COMPILED.get_or_init(build).as_ref().map_err(|e| e.clone())
 }
 
-/// Rewrite policy patterns into DFA-compatible form. `\b` becomes the ASCII
-/// word boundary (a PREFILTER — pattern-edge occurrences are re-validated
-/// against Unicode boundaries in `scan_rx`), and the two single-character
-/// look-around forms become consuming UNICODE `\w` characters with one-CHAR
-/// span trims recorded. Unicode `\w` (not ASCII) so an edge
-/// like `café--style` or `变量--值` produces a DFA candidate at all; the
-/// consumed char is then held to `is_xid_continue` in `scan_rx`.
+/// Rewrite policy patterns into DFA-compatible form. `\b` becomes an ASCII
+/// word-boundary prefilter. `scan_rx` re-validates pattern-edge occurrences
+/// against Unicode boundaries. The two single-character look-around forms
+/// become consuming Unicode `\w` characters with one-character span trims
+/// recorded. Unicode `\w` admits DFA candidates at edges such as
+/// `café--style` and `变量--值`. `scan_rx` then checks the consumed character
+/// with `is_xid_continue`.
 fn rewrite_pattern(p: &str) -> Result<(String, usize, usize, bool, bool), String> {
     let mut pat = p.to_string();
     let mut trim_start = 0usize;
@@ -155,18 +154,18 @@ fn rewrite_pattern(p: &str) -> Result<(String, usize, usize, bool, bool), String
 /// return its maximum match width in bytes.
 ///
 /// The bespoke overlapping forward+reverse adapter recovers each match start
-/// with a reverse search; on an unbounded-width pattern that window is the
+/// with a reverse search. On an unbounded-width pattern that window is the
 /// whole region and a run of overlapping match ends makes it quadratic
 /// (`turn\d+...\d+` measured ~12s at 256KB). The dependency decision therefore
-/// bans EVERY unbounded-width quantifier (`*`, `+`, `{n,}`) at policy build —
-/// whitespace included. Unbounded whitespace is NOT exempt: a pattern ending in
+/// bans every unbounded-width quantifier (`*`, `+`, `{n,}`) at policy build,
+/// whitespace included. Unbounded whitespace is not exempt: a pattern ending in
 /// `\s+` (e.g. Q001's `\?\s+`) manufactures a fresh match end at every
 /// whitespace byte, each an O(region) reverse scan, which reproduces the exact
 /// quadratic (a `\?\s+` tail measured 10.66s at 256KB). Bounded forms are
-/// required everywhere: `.*`/`\d+`/`\w+` → `[^.\r\n]{0,120}` and friends;
+/// required everywhere: `.*`/`\d+`/`\w+` → `[^.\r\n]{0,120}` and friends.
 /// `\s+`/`\s*` → `\s{1,N}`/`\s{0,N}`.
 ///
-/// `Ok(Some(w))` is the pattern's max match width in bytes; `Ok(None)` only for
+/// `Ok(Some(w))` is the pattern's max match width in bytes. `Ok(None)` only for
 /// the degenerate case where the HIR reports no finite maximum despite being
 /// bounded (it never arises for a fully bounded pattern, but the reverse-scan
 /// caller falls back safely). `Err` is a banned pattern or a parse failure.
@@ -255,7 +254,7 @@ fn build() -> Result<CompiledPolicy, String> {
         .multi_line(true);
     // One multi-pattern machine with MatchKind::All. The lazy DFA is used
     // because full determinization of the bounded-window patterns
-    // (`.{1,160}` under an unanchored prefix) is exponential; laziness keeps
+    // (`.{1,160}` under an unanchored prefix) is exponential. Laziness keeps
     // the same automaton semantics while materializing only reachable
     // states, with the cache size as the load-time bound.
     let fwd = DFA::builder()
@@ -316,7 +315,7 @@ fn word_bounded(hay: &str, span: &Range<usize>) -> bool {
 }
 
 /// Real Unicode word boundary at `at`: exactly one side of the position is a
-/// word (xid_continue) character — the Unicode analog of `\b`, sharing
+/// word (xid_continue) character, the Unicode analog of `\b`, sharing
 /// `word_bounded`'s character class. Out-of-text sides count as non-word.
 fn unicode_word_boundary(hay: &str, at: usize) -> bool {
     let before = hay[..at]
@@ -341,7 +340,7 @@ fn exempted(hay: &str, span: &Range<usize>, phrases: &[String]) -> bool {
     let win_end =
         crate::widen_to_char_boundaries(hay, span.end..(span.end + 60).min(hay.len())).end;
     let window = hay[win_start..win_end].to_lowercase();
-    // Lowercasing can change byte lengths for non-ASCII; recompute the match
+    // Lowercasing can change byte lengths for non-ASCII. Recompute the match
     // position by lowercasing the prefix.
     let rel_start = hay[win_start..span.start].to_lowercase().len();
     let rel_end = rel_start + hay[span.start..span.end].to_lowercase().len();
@@ -359,13 +358,13 @@ fn exempted(hay: &str, span: &Range<usize>, phrases: &[String]) -> bool {
     false
 }
 
-/// True when the matched past participle is being used as an adjective
-/// rather than as a verb. Three left-context shapes say so: a hyphen joining
-/// it to the word before (`well-navigated waters`), a determiner or
-/// possessive directly before it (`the navigated route`, `a landscaped
-/// garden`), and an `-ly` adverb before it (`the carefully navigated
-/// channel`). A subject before the participle (`she navigated the file`,
-/// `the report landscaped the field`) is the verb and still fires.
+/// True when the matched past participle is an adjective. Three left-context
+/// shapes say so: a hyphen joining it to the word before (`well-navigated
+/// waters`), a determiner or possessive directly before it (`the navigated
+/// route`, `a landscaped garden`), and an `-ly` adverb before it (`the
+/// carefully navigated channel`). A subject before the participle (`she
+/// navigated the file`, `the report landscaped the field`) is the verb and
+/// still fires.
 fn participial_adjective(hay: &str, span: &Range<usize>) -> bool {
     if !hay[span.clone()].to_ascii_lowercase().ends_with("ed") {
         return false;
@@ -463,7 +462,7 @@ const FINITE_FORMS: &[&str] = &[
     "will", "would", "shall", "should", "may", "might", "must",
 ];
 
-/// A `while` clause whose very next word is a participle heading the clause,
+/// A `while` clause whose next word is a participle heading the clause,
 /// which is the second temporal shape SLOP-C004 drops. Three things have to
 /// hold. The word after the keyword reads as a participle, on the shared test
 /// that also keeps nothing and everything out. It is not one of the concession
@@ -643,7 +642,7 @@ pub fn scan_all(
     // 8c. Decoded link destinations: where the raw spelling hides the
     // pattern behind backslash escapes or character references the parser (or
     // the browser, for autolinks) resolves, run the link-URL rules over the
-    // DECODED text too and map each hit back onto the raw region.
+    // decoded text too and map each hit back onto the raw region.
     for (r, decoded) in &doc.link_url_decoded {
         scan_link_url_decoded(cp, &mut caches, config, src, r, decoded, &mut hits)?;
     }
@@ -810,11 +809,11 @@ fn accept_word_hit(
             }
         }
     }
-    // A rule may anchor part of its lexicon rather than all of it. The entries
-    // named in match.params.block_start_only fire only where they open a
-    // sentence, a line, or a list item; the rest of the same lexicon is
-    // unanchored. Reading the list per hit costs nothing measurable, since
-    // only a matched span reaches here.
+    // A rule may anchor selected lexicon entries. The entries named in
+    // match.params.block_start_only fire only where they open a sentence, a
+    // line, or a list item. The rest of the same lexicon is unanchored.
+    // Reading the list per hit costs nothing measurable, since only a matched
+    // span reaches here.
     if let Some(anchored) = rule
         .params
         .as_table()
@@ -852,8 +851,8 @@ fn accept_word_hit(
     if rule.id == "SLOP-A002" && participial_adjective(hay, &span) {
         return;
     }
-    // Widen in the coordinate system the span lives in — see `scan_rx`. A Norm
-    // hit maps through `to_source` (source coords, widened against `src`); every
+    // Widen in the coordinate system the span lives in, see `scan_rx`. A Norm
+    // hit maps through `to_source` (source coords, widened against `src`). Every
     // other context matched in `hay` and is widened against `hay` (the caller
     // rebases a slice-local span afterward).
     let source_span = match (ctx, norm) {
@@ -868,10 +867,9 @@ fn accept_word_hit(
     }
     let mut hit = Hit::new(rule_idx, source_span);
     hit.quoted = quoted;
-    // A match inside a FULLY-folded single-script token (no Latin
-    // witness; folded because every char was a table confusable) is the
-    // conservative candidate path — the rare genuine foreign word that folds
-    // onto an English lexicon term must reach a judge, not hard-block.
+    // A fully folded single-script token contains only listed confusables and
+    // has no Latin witness. A genuine foreign word can fold onto an English
+    // lexicon term this way, so its finding reaches the judge as a candidate.
     if let (ScanCtx::Norm, Some(n)) = (ctx, norm) {
         if n.span_has_flag(&span, crate::extract::F_FULL_FOLD) {
             hit.force_candidate = true;
@@ -882,10 +880,10 @@ fn accept_word_hit(
 }
 
 /// Run the link-URL passes (case-insensitive word set, case-sensitive
-/// word set, regex set) over the DECODED text of one link destination, then
+/// word set, regex set) over the decoded text of one link destination, then
 /// map each hit back into source coordinates: the exact position of the
 /// matched trigger inside the raw region when it occurs there literally,
-/// else the whole region as the fail-safe (fidelity-safe — `render_key` resolves
+/// else the whole region as the fail-safe (fidelity-safe, `render_key` resolves
 /// the escape/reference spellings, so the whole-region slice still renders
 /// to the trigger).
 fn scan_link_url_decoded(
@@ -927,7 +925,7 @@ fn scan_link_url_decoded(
     for mut hit in sub {
         let trigger = match &hit.trigger {
             Some(t) => t.clone(),
-            // The cs word-set pass records no trigger; the decoded slice at
+            // The cs word-set pass records no trigger. The decoded slice at
             // the hit's span is the matched text.
             None => match decoded.get(hit.span.clone()) {
                 Some(t) => t.to_string(),
@@ -979,11 +977,11 @@ fn scan_rx(
             continue;
         }
         // Bound the reverse start-recovery window by the pattern's max width.
-        // The true start is at most `max_width` bytes before `end`, so a
-        // window of that size always contains it while capping each reverse
-        // search at O(width) instead of O(region) — the fix for the quadratic
-        // adapter. Every policy pattern is bounded, so this always bites; the
-        // region-bound fallback is dead-defensive.
+        // The true start is at most `max_width` bytes before `end`, so that
+        // window always contains it. Capping each reverse search at O(width)
+        // fixes the quadratic O(region) adapter. Every policy pattern is
+        // bounded, so this cap always applies. The region-bound fallback is
+        // unreachable under that contract and remains defensive.
         let rev_lo = match meta.max_width {
             Some(w) => region.start.max(end.saturating_sub(w)),
             None => region.start,
@@ -1003,11 +1001,11 @@ fn scan_rx(
             continue;
         }
         // The DFA matched with ASCII-boundary and Unicode-`\w` PREFILTER
-        // forms; validate each candidate's edges against real Unicode word
+        // forms. Validate each candidate's edges against real Unicode word
         // boundaries before accepting. A trimmed look-around edge consumed
-        // one CHAR (possibly multi-byte) that must be a genuine word char;
-        // a pattern-edge `\b` must sit at a genuine boundary — an ASCII
-        // boundary inside one xid token ("éwhy") is rejected here.
+        // one CHAR (possibly multi-byte) that must be a genuine word char. A
+        // pattern-edge `\b` must sit at a genuine boundary, an ASCII boundary
+        // inside one xid token (`"éwhy"`) is rejected here.
         let mut mstart = start;
         let mut mend = end;
         if meta.trim_start > 0 {
@@ -1039,9 +1037,9 @@ fn scan_rx(
                 if hay[span.clone()].starts_with('\u{3010}') && cjk_present(&hay[span.clone()]) {
                     continue;
                 }
-                // Guard promise: a dagger-digit pair that BEGINS its
-                // line is a footnote definition, not inline citation
-                // residue — exempt. Inline dagger-digit pairs still fire.
+                // A dagger-digit pair at the start of its line defines a
+                // footnote and is exempt. Inline dagger-digit pairs still
+                // report.
                 if hay[span.clone()].starts_with(['†', '‡']) {
                     let ls = hay[..span.start].rfind('\n').map(|p| p + 1).unwrap_or(0);
                     if hay[ls..span.start].trim().is_empty() {
@@ -1090,10 +1088,11 @@ fn scan_rx(
                 let first = hay[span.clone()].chars().next();
                 if matches!(first, Some('.' | '!' | '?')) {
                     let before = &hay[..span.start];
-                    // A digit run that opens its line is a list marker
-                    // ("2. Granted"), not a sentence end. A digit that
-                    // follows other text on the line ends a sentence
-                    // ("version 2. Granted"), so only the marker suppresses.
+                    // A digit run that opens its line is a list marker (`"2.
+                    // Granted"`). The sentence-end test excludes it. A digit
+                    // following other text on the line ends a sentence
+                    // (`"version 2. Granted"`), so only the marker
+                    // suppresses.
                     if before
                         .chars()
                         .next_back()
@@ -1153,15 +1152,16 @@ fn scan_rx(
         if rule.stance(config.profile) == Stance::Off {
             continue;
         }
-        // Widen to char boundaries in the coordinate system the span lives in.
-        // A Norm hit's `to_source` already returns source coordinates, widened
-        // against `src`. Every other context matched inside `hay`, so the span
-        // is in `hay` coordinates (== `src` for whole-source scans; a heading
-        // SLICE otherwise) and must be widened against `hay` — the heading loop
-        // rebases the slice-local span to source coords AFTER this returns.
-        // Widening a heading-local span against the full `src` dragged a heading
-        // span end across a multi-byte char sitting at the same byte offset near
-        // the document start (`aaaaaİ …\n\n# Impact` → `Impact `).
+        // Widen to character boundaries in the coordinate system the span
+        // lives in. A Norm hit's `to_source` already returns source
+        // coordinates, widened against `src`. Every other context matched
+        // inside `hay`, so its span is in `hay` coordinates. Whole-source
+        // scans have `hay == src`. Heading scans use a slice and widen
+        // against `hay`. The heading scan rebases its local span to source
+        // coordinates after this returns. Widening a heading-local span
+        // against full `src` dragged its end across a multibyte character at
+        // the same offset near the document start (`aaaaaİ …\n\n# Impact`
+        // became `Impact `).
         let source_span = match (ctx, norm) {
             (ScanCtx::Norm, Some(n)) => match n.to_source(span.clone()) {
                 Some(s) => crate::widen_to_char_boundaries(src, s),
@@ -1208,9 +1208,9 @@ pub fn resolve_overlaps(hits: &mut Vec<Hit>) {
 mod bounded_width_tests {
     use super::validate_bounded_width;
 
-    // F2: the whitespace exemption is gone. A pattern whose match can END on an
+    // F2: the whitespace exemption is gone. A pattern whose match can end on an
     // unbounded whitespace run is exactly what made the adapter quadratic, so
-    // the gate must reject it — no class is exempt.
+    // the gate must reject it, no class is exempt.
     #[test]
     fn unbounded_trailing_whitespace_is_rejected() {
         assert!(

@@ -1,7 +1,7 @@
 //! Calibration coverage against real-world markdown: table-cell
-//! barriers — no match may fuse across the `|` cell delimiter; A002
+//! barriers, no match may fuse across the `|` cell delimiter. A002
 //! `harness` narrowed to the verb-with-object slop
-//! form; and mention-vs-use — the code-span authoring convention for
+//! form. And mention-vs-use, the code-span authoring convention for
 //! quoted banned-word lists, with the plain-prose enumeration residual pinned.
 
 mod common;
@@ -12,7 +12,7 @@ use unslop::Profile;
 // --- Table cells scanned as prose must not fuse across cell delimiters ------
 
 /// S001 (`^--\s{1,8}\S`) and M001 (`\s--\s`) can otherwise fire on table
-/// placeholder-dash cells by pairing one cell's `--` with the NEXT cell's
+/// placeholder-dash cells by pairing one cell's `--` with the next cell's
 /// text across the Block newline. The cell-end barrier must stop both.
 #[test]
 fn placeholder_dash_cells_no_longer_fuse_across_cell_boundaries() {
@@ -35,7 +35,7 @@ fn placeholder_dash_cells_no_longer_fuse_across_cell_boundaries() {
     );
 }
 
-/// Genuine slop INSIDE one cell must still fire: the barrier sits at the cell
+/// Genuine slop inside one cell must still fire: the barrier sits at the cell
 /// end only, never inside it, and cell interiors remain scanned prose.
 #[test]
 fn genuine_slop_inside_a_single_cell_still_fires() {
@@ -56,8 +56,9 @@ fn genuine_slop_inside_a_single_cell_still_fires() {
 
 /// A signature line inside one cell is in-cell content, not cross-cell
 /// fusion: the block-start position of the cell's own text must survive the
-/// barrier (which is why the barrier is at the cell END, not the start).
-/// The dash-opened signature line belongs to SLOP-S004 since the split.
+/// barrier (which is why the barrier is at the cell end). The cell start
+/// excludes the barrier. The dash-opened
+/// signature line belongs to SLOP-S004 since the split.
 #[test]
 fn signature_shape_within_one_cell_still_fires() {
     let text = "| Item | Note |\n\
@@ -120,13 +121,14 @@ fn a002_fires(text: &str) -> bool {
         .any(|f| f.rule_id == "SLOP-A002" && f.state == "violation")
 }
 
-/// FN regression: a determiner-only form silently
-/// misses determiner-less verb slop. The exact verified-FN repros — each
-/// clean under a determiner-only calibration — must fire.
+/// FN regression: a determiner-only form silently misses determiner-less verb
+/// slop. The regression inputs below pass a determiner-only matcher. Each
+/// must fire.
 #[test]
 fn a002_determiner_less_verb_slop_fires() {
     for text in [
-        // The three verified-FN repros, isolated and re-verified.
+        // The three FN reproductions were isolated and checked
+        // again.
         "You can harness machine learning without extra setup.",
         "The SDK lets you harness modern APIs with one call.",
         "Use it to harness advanced language models in CI.",
@@ -144,9 +146,9 @@ fn a002_determiner_less_verb_slop_fires() {
 }
 
 /// NOUN uses of `harness` dominate real technical prose and must pass. The
-/// rule requires the slop VERB construction — determiner+object, a preceding
+/// rule requires the slop VERB construction, determiner+object, a preceding
 /// verb/subject signal, the sentence-start imperative, an AI-domain object,
-/// or the `harnessing` gerund; every noun use passes structurally.
+/// or the `harnessing` gerund. Every noun use passes structurally.
 #[test]
 fn a002_harness_verb_with_object_fires() {
     for text in [
@@ -175,10 +177,9 @@ fn a002_harness_noun_uses_do_not_fire() {
     }
 }
 
-/// Every determiner-less/other-determiner verb
-/// form confirmed as a silent FN must fire — in the imperative
-/// (standalone) carrier via the sentence-start form AND in a signaled
-/// carrier via the verb-context alternation.
+/// Every recorded silent FN in a determiner-less or other-determiner verb
+/// form must fire in the imperative (standalone) carrier via the sentence-start form
+/// and in a signaled carrier via the verb-context alternation.
 #[test]
 fn a002_confirmed_verb_forms_fire_in_both_carriers() {
     for phrase in [
@@ -220,18 +221,19 @@ fn a002_demonstrative_paradigm_is_symmetric() {
 
 /// Boundary pins for the harness calibration, so neither residual is
 /// accidental. Over-fire side (accepted, FN-safety first): a sentence-start
-/// noun compound matches the imperative form and FIRES — a documented FP,
-/// waivable, never a miss. Miss side (the documented residual): a bare
-/// plural-noun subject with a base verb and a non-AI object is structurally
-/// identical to a noun compound ("harness telemetry") and is not matched.
+/// noun compound matches the imperative form and fires, a documented FP
+/// that reaches the waiver path. Miss side (the documented
+/// residual): a bare plural-noun subject with a base verb and a non-AI object
+/// is structurally identical to a noun compound ("harness telemetry") and is
+/// not matched.
 #[test]
 fn a002_harness_calibration_boundaries_are_pinned() {
     assert!(
         a002_fires("Harness configuration lives in rig.toml."),
         "sentence-start over-fire is the accepted side of the boundary"
     );
-    // Covering "harness that capability" costs the relativizer
-    // over-fire — accepted, documented, waivable, never a miss.
+    // Covering `"harness that capability"` also matches the relativizer noun
+    // use. This accepted false positive is documented and waivable.
     assert!(
         a002_fires("We ship a harness that runs nightly."),
         "relativizer over-fire is the accepted side of the boundary"
@@ -250,7 +252,7 @@ fn a002_harness_calibration_boundaries_are_pinned() {
 // --- C-family vs the cell barrier, both sides pinned -----------------------
 
 /// C006's \s{1,8} gap cannot cross the cell barrier, so
-/// the cross-cell contrast is SUPPRESSED (working-as-designed —
+/// the cross-cell contrast is suppressed (working-as-designed,
 /// attacker-unrealistic as organic slop, candidate tier even in-cell), while
 /// the same phrase inside one cell still fires.
 #[test]
@@ -273,11 +275,11 @@ fn c006_cross_cell_suppressed_but_single_cell_fires() {
     );
 }
 
-/// C005's [^.!?] classes admit U+FFFD and the newline, so
-/// the cross-cell tricolon BRIDGE persists — candidate tier, surfaced, never
-/// silence. Pinned so the asymmetry with C006 stays deliberate; excluding
-/// U+FFFD from the C-family classes would silence contrast-slop legitimately
-/// spanning an inline-code barrier (a real FN) and must not be done casually.
+/// C005's [^.!?] classes admit U+FFFD and the newline, so the cross-cell
+/// tricolon bridge persists, reported at candidate tier. Pinned so the
+/// asymmetry with C006 stays deliberate. Excluding U+FFFD from the C-family
+/// classes would silence contrast-slop legitimately spanning an inline-code
+/// barrier (a real FN) and must not be done casually.
 #[test]
 fn c005_cross_cell_bridge_persists_as_candidate() {
     let text = "| A | B | C |\n| --- | --- | --- |\n\
@@ -312,12 +314,12 @@ fn a002_other_homographs_still_fire_in_bare_prose() {
 
 // --- Mention-vs-use on quoted banned-word lists -----------------------------
 //
-// Decision: NO prose-list downgrade. The FN-safe authoring
+// Prose lists keep the prose rule tier. The FN-safe authoring
 // conventions are code spans / fenced code (excluded by segmentation) and
 // blockquotes (deterministic candidate downgrade with provenance). A
 // downgrade keyed on "list items under an avoid/banned heading" was rejected:
 // LLMs produce "avoid"-headed lists organically, and any genuine slop
-// sentence can be authored as a list item under one — a silent-FN channel.
+// sentence can be authored as a list item under one, a silent-FN channel.
 
 /// The convention works: a style guide quoting every banned term in code
 /// spans and a fenced block carries no ornamental/filler finding at all.
@@ -345,7 +347,7 @@ fn banned_words_in_code_spans_and_fences_do_not_fire() {
 }
 
 /// The blockquote convention: quoted banned words downgrade to candidate
-/// with claimed-quotation provenance — surfaced, never silent, not blocking.
+/// with claimed-quotation provenance. Each is surfaced and never blocks.
 #[test]
 fn banned_words_in_a_blockquote_downgrade_to_candidate() {
     let text = "# Style guide\n\n> Avoid: delve, game-changer.\n";
@@ -364,7 +366,7 @@ fn banned_words_in_a_blockquote_downgrade_to_candidate() {
 }
 
 /// Residual pin: PLAIN-PROSE enumeration of banned words still fires as a
-/// violation. Deliberate — see the module comment above.
+/// violation. See the module comment above.
 /// If this test ever goes red because someone added a prose-list downgrade,
 /// that change must first prove it cannot hide genuine slop.
 #[test]
@@ -381,7 +383,7 @@ fn plain_prose_banned_word_enumeration_still_fires() {
 }
 
 /// The guardrail the rejected downgrade was measured against: genuine slop in
-/// ordinary prose — including inside a list under an "avoid" heading — fires.
+/// ordinary prose, including inside a list under an "avoid" heading, fires.
 #[test]
 fn genuine_slop_in_prose_and_avoid_lists_still_fires() {
     let text = "We delve into the internals of the parser.\n";
@@ -401,15 +403,14 @@ fn genuine_slop_in_prose_and_avoid_lists_still_fires() {
     );
 }
 
-/// Diagnosis pin (A001 on crate names in audit tables): a
-/// single-cell
-/// lexicon word, a crate NAMED `robust` or `Vibrant`, is NOT cross-cell
-/// fusion and deliberately still fires. Distinguishing a name column from a
-/// description cell is not decidable mechanically, and a cells-are-data
-/// downgrade would hide genuine slop written in a description cell — a
-/// silent-FN channel. The authoring convention is code spans: `robust` in
-/// backticks is excluded by segmentation (see the mention-vs-use tests). Pinned so the
-/// residual is visible, not accidental.
+/// Diagnosis pin (A001 on crate names in tables that record crate checks): a single-cell
+/// lexicon word, a crate named `robust` or `Vibrant`, is not cross-cell
+/// fusion and still fires. Distinguishing a name column from a description
+/// cell is not decidable mechanically, and a cells-are-data downgrade would
+/// hide genuine slop written in a description cell, a silent-FN channel. The
+/// authoring convention is code spans: `robust` in backticks is excluded by
+/// segmentation (see the mention-vs-use tests). This test records the
+/// residual.
 #[test]
 fn single_cell_lexicon_word_is_a_documented_residual_not_fusion() {
     let text = "| Crate | Verdict |\n\
@@ -417,7 +418,7 @@ fn single_cell_lexicon_word_is_a_documented_residual_not_fusion() {
         | robust | clean |\n";
     let report = run(text, Profile::GeneralWriting);
     assert_invariants(text, &report);
-    // robust sits on SLOP-A010 since the ornamental set split by whether a
+    // `robust` sits on SLOP-A010 since the ornamental set split by whether a
     // word still has a plain sense to mean.
     let hits: Vec<_> = report
         .findings
@@ -429,7 +430,7 @@ fn single_cell_lexicon_word_is_a_documented_residual_not_fusion() {
     assert_eq!(&text[span.start..span.end], "robust");
 
     // The convention: the same table with the crate name in a code span is
-    // clean — the code-span exclusion plus its barrier cover it.
+    // clean, the code-span exclusion plus its barrier cover it.
     let text = "| Crate | Verdict |\n\
         | --- | --- |\n\
         | `robust` | clean |\n";
@@ -446,7 +447,7 @@ fn single_cell_lexicon_word_is_a_documented_residual_not_fusion() {
 //
 // The spec's 16 positive and 16 negative boundary examples, pinned so the T1
 // suppression classifier and the T2-T4 trigger regexes survive future tuning.
-// Positives are third-person self-description; negatives are imperatives,
+// Positives are third-person self-description. Negatives are imperatives,
 // second-person directives, parenthetical interpolations, and shapes owned by
 // SLOP-C001/C003. The deny-list homograph FN is pinned separately below.
 
@@ -596,7 +597,7 @@ fn c007_whitespace_only_np_is_silent() {
 /// ACCEPTED FALSE NEGATIVE (KNOWN-EDGES): C007 tail matching is
 /// ASCII-whitespace-only. A non-ASCII space (here U+00A0 NBSP) between the
 /// keyword and the noun phrase fails the keyword's right-boundary check, so
-/// the tail does not fire. Accepted as attacker-unrealistic; this test
+/// the tail does not fire. Accepted as attacker-unrealistic. This test
 /// characterizes the behavior, it does not endorse widening the match.
 #[test]
 fn c007_nonascii_space_tail_is_an_accepted_false_negative() {
@@ -612,7 +613,7 @@ fn c007_nonascii_space_tail_is_an_accepted_false_negative() {
 
 /// The documented deny-list false negative: `Set` is the noun/verb homograph
 /// on the imperative opener list, so this descriptive sentence is wrongly
-/// suppressed. Accepted by design — the classifier's bias is FP-safety, and
+/// suppressed. Accepted, the classifier's bias is FP-safety, and
 /// every suppression doubt resolves toward silence.
 #[test]
 fn c007_denylist_homograph_is_an_accepted_false_negative() {
@@ -703,13 +704,13 @@ fn c007_abbreviation_mid_tail_no_longer_false_fires() {
     );
 }
 
-/// The R6 acceptance case proper — NO trailing comma, so the tail parser
+/// The R6 acceptance case proper, no trailing comma, so the tail parser
 /// reaches the sentence terminal and the comma variant above cannot stand in
 /// for it. A `not X but Y` locative/technical contrast is a legitimate
 /// contrast (same class as the design's `Returns a reference, not a copy.`
 /// keep-rule): the contrastive `but` continuation inside the tail is
-/// SLOP-C008's pair territory, never a C007 apophatic caveat. A C008
-/// candidate here would be adjudicable; a C007 false positive is not.
+/// SLOP-C008's pair territory. C007 excludes this shape. A C008 candidate
+/// here would be adjudicable. A C007 false positive is not.
 #[test]
 fn c007_not_x_but_y_contrast_without_trailing_comma_stays_silent() {
     let t = "Adoption is concentrated, not in the U.S. but in Asia.\n";
@@ -756,7 +757,7 @@ fn c007_tail_ending_in_abbreviation_fires_with_the_full_span() {
 /// imperative opener (`Use`) then suppresses the tail. Under the old
 /// walk-back the abbreviation period read as a clause boundary, the
 /// recovered clause was just `hosted mirror`, the opener was invisible, and
-/// this sentence false-fired — so this assertion fails if the
+/// this sentence false-fired, so this assertion fails if the
 /// `period_is_terminal` arm is removed from `clause_start`. The
 /// non-directive control pins that crossing the abbreviation did not also
 /// change the verdict on a clause that should fire.
@@ -809,14 +810,14 @@ fn c007_eg_mid_np_fires_with_the_complete_span() {
     assert_eq!(common::snippet(f[0]), ", not e.g. the raw path.");
 }
 
-/// ACCEPTED EDGE (KNOWN-EDGES): lowercase sentence starts. Chat-style
-/// prose that opens its next sentence lowercase reads the real terminal as
-/// a continuation. Two observable shapes, both characterized here: when the
-/// continuation reaches another terminal inside the NP budget the tail
-/// fires with an over-wide span (still genuine slop, still verified by
-/// trigger fidelity); when the continuation meets an excluded character
-/// (`,` `;` `:` newline) or exhausts `tail_np_max_bytes` first, the tail is
-/// an accepted false negative — the fail-toward-silence trade.
+/// ACCEPTED EDGE (KNOWN-EDGES): lowercase sentence starts. Chat-style prose
+/// that opens its next sentence lowercase reads the real terminal as a
+/// continuation. Two observable shapes, both characterized here: when the
+/// continuation reaches another terminal inside the NP budget the tail fires
+/// with an over-wide span (still genuine slop, still checked by trigger
+/// fidelity). When the continuation meets an excluded character (`,` `;` `:`
+/// newline) or exhausts `tail_np_max_bytes` first, the tail is an accepted
+/// false negative, the fail-toward-silence trade.
 #[test]
 fn c007_lowercase_next_sentence_is_an_accepted_edge() {
     // Silent shape: the comma in the continuation kills the candidate.
@@ -884,9 +885,9 @@ fn a005_closed_boundaries_and_plain_prose_stay_silent() {
     }
 }
 
-/// quotation_suppress: an idiom inside a claimed-quotation region is
-/// DROPPED, not downgraded — the quoted author's diction is not the
-/// writer's. The adjacent prose control proves the rule itself is hot.
+/// quotation_suppress: an idiom inside a claimed-quotation region is dropped.
+/// Quotation suppression excludes the quoted idiom. The adjacent prose
+/// control proves the rule itself is hot.
 #[test]
 fn a005_quoted_hits_are_suppressed_entirely() {
     let t = "Prose line.\n\n> The paper weaves together two traditions of analysis.\n";
@@ -1086,7 +1087,7 @@ fn v005_release_diction_and_prose_form_are_silent() {
 // --- SLOP-C008 contrastive pair ---------------------------------------------
 
 /// The #414 escape shapes verbatim: the infinitive pair, the wh-parallel
-/// pair, the interpolated pair C007 excludes by design, and the
+/// pair, the interpolated pair C007 excludes, and the
 /// two-sentence reframe without C002's pronoun-subject requirement.
 #[test]
 fn c008_pair_shapes_fire_as_experimental_candidates() {

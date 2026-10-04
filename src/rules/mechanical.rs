@@ -35,7 +35,7 @@ pub fn evaluate(
     let total = prepared.text.len();
     let rule = &cp.pkg.rules[idx];
     let pct = super::param_i64(rule, "raw_html_dominance_pct").unwrap_or(20) as usize;
-    // Dominance needs BOTH the ratio and an absolute net-markup floor: the
+    // Dominance needs both the ratio and an absolute net-markup floor: the
     // ratio alone tripped on an idiomatic badge-header README (~700 bytes of
     // centered-div/badge markup in a ~1.5 KB file), while every hidden-HTML
     // evasion class is separately fail-closed by the anomalies above and

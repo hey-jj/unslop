@@ -13,11 +13,10 @@ use unslop::Profile;
 #[test]
 fn word_split_by_inline_code_does_not_fire() {
     // Without the barrier the norm view concatenates across the excluded
-    // inline-code gap, assembling "delve" from "del" + "ve" and firing
-    // SLOP-A001 as a BLOCKING
-    // violation on a word the reader never sees (the rendered text is
-    // "del x ve", with x in code font). The barrier interposes U+FFFD so the
-    // flanking runs can never fuse.
+    // inline-code gap, assembling `"delve"` from `"del"` + `"ve"` and firing
+    // SLOP-A001 as a BLOCKING violation on a word the reader never sees (the
+    // rendered text is `"del x ve"`, with x in code font). The barrier
+    // interposes U+FFFD so the flanking runs can never fuse.
     let text = "Intro sentence for length and context here.\n\nWe del`x`ve into the topic.\n";
     let report = run(text, Profile::Doc);
     assert!(
@@ -42,9 +41,9 @@ fn genuine_word_still_fires() {
 
 #[test]
 fn inline_code_does_not_manufacture_a_phrase() {
-    // The barrier must be U+FFFD, not a space: a space between "game" and
-    // "changer" would assemble the two-word phrase "game changer" that the
-    // reader never sees adjacently (the code content renders between them).
+    // The barrier uses U+FFFD. A space between `"game"` and `"changer"` would
+    // assemble `"game changer"`, a phrase the reader never sees adjacently
+    // because code content renders between those fragments.
     let text = "Intro sentence for length and context here.\n\nA game`x`changer for the team.\n";
     let report = run(text, Profile::Doc);
     assert!(
@@ -66,8 +65,8 @@ fn inline_code_does_not_manufacture_a_phrase() {
 
 #[test]
 fn autolink_gap_is_a_barrier_too() {
-    // An autolink is an excluded inline region whose URL text renders VISIBLY
-    // between the flanking runs — same class as inline code: "del" + "ve"
+    // An autolink is an excluded inline region whose URL text renders visibly
+    // between the flanking runs, same class as inline code: "del" + "ve"
     // must not fuse across it.
     let text =
         "Intro sentence for length and context here.\n\nWe del<https://example.com/a>ve into it.\n";
@@ -86,7 +85,7 @@ fn autolink_gap_is_a_barrier_too() {
 fn nonascii_word_prefix_blocks_q001_boundary() {
     // é is xid_continue, so "éwhy" is ONE word and "why" is not at a real
     // word boundary. The ASCII `(?-u:\b)` prefilter sees a boundary inside
-    // the token; the Unicode post-filter must reject the candidate.
+    // the token. The Unicode post-filter must reject the candidate.
     let text = "Intro sentence for context.\n\néwhy does this matter?\n";
     let report = run(text, Profile::Doc);
     assert!(
@@ -174,8 +173,8 @@ fn refdef_destination_still_fires() {
 
 #[test]
 fn repeated_inline_url_reports_the_destination() {
-    // The destination and the title carry the same URL; `rfind` over the
-    // whole link span picked the TITLE occurrence. The destination is the
+    // The destination and the title carry the same URL. `rfind` over the
+    // whole link span picked the title occurrence. The destination is the
     // first occurrence after the `](` delimiter.
     let url = "https://example.com/?utm_source=chatgpt";
     let text = format!("[link]({url} \"{url}\")\n");
@@ -197,8 +196,8 @@ fn repeated_inline_url_reports_the_destination() {
 
 #[test]
 fn footnote_reference_gap_is_a_barrier() {
-    // A footnote marker is RENDERED (the reader sees "del¹ve", never
-    // "delve"), so a word split by one is the same FP class as the
+    // A footnote marker is rendered (the reader sees `"del¹ve"`, never
+    // `"delve"`), so a word split by one is the same FP class as the
     // inline-code gap: the flanking runs must not fuse.
     let text = "Intro sentence for length and context here.\n\n\
                 We del[^1]ve into it.\n\n[^1]: A note.\n";
@@ -210,7 +209,7 @@ fn footnote_reference_gap_is_a_barrier() {
     );
     common::assert_invariants(text, &report);
 
-    // Control: the common shape — a marker AFTER a completed word — still
+    // Control: the common shape, a marker after a completed word, still
     // fires, because U+FFFD is non-xid and the word boundary holds.
     let text = "Intro sentence for length and context here.\n\n\
                 We delve[^1] into it.\n\n[^1]: A note.\n";
@@ -227,8 +226,8 @@ fn footnote_reference_gap_is_a_barrier() {
 
 #[test]
 fn render_affecting_void_html_is_a_barrier() {
-    // A RENDER-AFFECTING void tag puts a visible break or object between the
-    // flanking runs — the reader never sees the text fused — so it is the
+    // A render-affecting void tag puts a visible break or object between the
+    // flanking runs, the reader never sees the text fused, so it is the
     // same barrier class as inline code (narrowed to exactly this set).
     for text in [
         "Intro sentence for length and context here.\n\nWe del<br>ve into it.\n",
@@ -244,9 +243,9 @@ fn render_affecting_void_html_is_a_barrier() {
         );
         common::assert_invariants(text, &report);
     }
-    // GUARDRAIL: NON-rendering void tags leave the text visually
-    // fused — `del<wbr>ve` reads "delve" — so barriering them would be a
-    // hide-a-word evasion channel. They fuse and FIRE, like formatting tags.
+    // GUARDRAIL: NON-rendering void tags leave the text visually fused,
+    // `del<wbr>ve` reads `"delve"`, so barriering them would be a hide-a-word
+    // evasion channel. They fuse and FIRE, like formatting tags.
     for text in [
         "Intro sentence for length and context here.\n\nWe del<meta>ve into it.\n",
         "Intro sentence for length and context here.\n\nWe del<link>ve into it.\n",
@@ -266,7 +265,7 @@ fn render_affecting_void_html_is_a_barrier() {
 #[test]
 fn image_alt_has_barriers_but_stays_scanned() {
     // The image is a replaced object: alt text must not fuse with flanking
-    // prose ("![del](image.png)ve" must not assemble "delve")...
+    // prose (`"![del](image.png)ve"` must not assemble `"delve"`)...
     let text = "Intro sentence for length and context here.\n\nSee ![del](image.png)ve here.\n";
     let report = run(text, Profile::Doc);
     assert!(
@@ -291,7 +290,7 @@ fn image_alt_has_barriers_but_stays_scanned() {
 #[test]
 fn p004_matches_the_decoded_destination() {
     // The raw spelling hides the tracking param behind a backslash escape or
-    // a character reference the parser decodes; the reader's URL carries
+    // a character reference the parser decodes. The reader's URL carries
     // `utm_source=chatgpt` either way. Without the decoded pass both were
     // silent FNs (the destination was not even located, so the region went
     // unscanned).
@@ -323,10 +322,10 @@ fn p004_matches_the_decoded_destination() {
     );
     common::assert_invariants(text, &report);
 
-    // AUTOLINKS are matched RAW: CommonMark does not decode
-    // references inside an autolink URI — the renderer amp-escapes it, so
-    // the browser href carries the literal `&#95;`/`&lowbar;` bytes, never a
-    // decoded tracking token. Firing here would be a false positive.
+    // AUTOLINKS are matched RAW: CommonMark does not decode references inside
+    // an autolink URI, the renderer amp-escapes it, so the browser href
+    // carries the literal `&#95;`/`&lowbar;` bytes. It contains no decoded tracking
+    // token. Firing here would be a false positive.
     for text in [
         "See <https://e/?utm&#95;source=chatgpt> here.\n",
         "See <https://e/?utm&lowbar;source=chatgpt> here.\n",
@@ -346,7 +345,7 @@ fn code_span_delimiter_label_does_not_abort() {
     // A label carrying a code span that spells `](…)` mislocates the
     // destination lookup onto the code-span URL. Requirement: the report
     // must not abort (this shape once was an exit-30 instrumentation
-    // error — `run` would panic); the decoded-destination fallback still
+    // error, `run` would panic). The decoded-destination fallback still
     // fires P004, with the span on the label occurrence (accepted
     // span-precision residual on manufactured input).
     let text = "See [label `](https://clean)` tail](https://e/?utm\\_source=chatgpt) here.\n";
@@ -361,9 +360,9 @@ fn code_span_delimiter_label_does_not_abort() {
 
 #[test]
 fn escaped_bracket_label_does_not_claim_the_delimiter() {
-    // Opportunistic close of the escaped-`](` edge: a label containing a
-    // literal `\](` plus the same URL repeated must report the DESTINATION
-    // occurrence, not the label one.
+    // An escaped `](` in a label must leave the destination delimiter intact.
+    // A label containing literal `\](` plus the repeated URL must report the
+    // destination occurrence. The label occurrence is excluded.
     let url = "https://e/?utm_source=chatgpt";
     let text = format!("See [a\\]({url}]({url}) here.\n");
     let report = run(&text, Profile::Doc);
@@ -384,13 +383,13 @@ fn escaped_bracket_label_does_not_claim_the_delimiter() {
 
 #[test]
 fn entities_outside_the_enumerated_table_fire() {
-    // pulldown decodes the FULL HTML5 entity table in link destinations;
+    // pulldown decodes the full HTML5 entity table in link destinations.
     // `&lowbar;`/`&period;` are outside the crate's enumerated render_key
-    // table. Routed through render_key the whole report would ABORT as an
-    // instrumentation error (exit 30) instead of firing — `run` panics on
-    // that, so these assertions also prove no exit-30. Trigger fidelity
-    // verifies against the parser-decoded destination text carried on the
-    // hit.
+    // table. Routing through render_key aborted the whole report with an
+    // instrumentation error (exit 30). `run` panics on that error. These
+    // assertions require a finding for each destination and also prove no
+    // exit-30. Trigger fidelity verifies against the parser-decoded
+    // destination text carried on the hit.
     for (text, rule) in [
         (
             "See [d](https://e/?utm&lowbar;source=chatgpt) here.\n",
@@ -428,7 +427,7 @@ fn autolink_p002_literal_fires_entity_does_not() {
     );
     common::assert_invariants(text, &report);
 
-    // ...but an entity-encoded spelling stays literal in the rendered href —
+    // ...but an entity-encoded spelling stays literal in the rendered href,
     // no functional token exists, so firing would be a false positive.
     let text = "See <https://x/turn0&#115;earch> here.\n";
     let report = run(text, Profile::Doc);

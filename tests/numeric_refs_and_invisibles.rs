@@ -2,21 +2,21 @@
 //! fence-close measurement, nested hidden-content triggers, tag-syntax edge
 //! cases, and the dominance floor:
 //!
-//!   - numeric character references are CLASSIFIED, not merely decoded:
+//!   - numeric character references receive a classification:
 //!     ordinary printables decode through the same pipeline literal chars
-//!     get; references to invisible/control codepoints are elided to
-//!     U+FFFD and fail closed as SLOP-M005; browser-decodable forms
+//!     get. References to invisible/control codepoints are elided to
+//!     U+FFFD and fail closed as SLOP-M005. Browser-decodable forms
 //!     outside the CommonMark grammar (overlong, semicolonless) fail
 //!     closed in HTML-derived text and stay inert in markdown.
 //!   - the closing-fence check measures indentation in COLUMNS,
 //!     container-relative (tab stops of 4), so `\t```` at EOF cannot
 //!     false-close a block and a valid list-nested `  \t~~~` close does
 //!     not raise a false unclosed-fence anomaly.
-//!   - the hidden-content anomaly triggers are scanned INSIDE skipped
+//!   - the hidden-content anomaly triggers are scanned inside skipped
 //!     code-bearing bodies, so `<code><template>…</template></code>`
 //!     fails closed instead of vanishing.
-//!   - self-closing detection requires the `/` to be tag syntax, not the
-//!     tail of an unquoted attribute value.
+//!   - self-closing detection requires a slash in tag syntax. Slashes at the
+//!     end of unquoted attribute values stay inside those values.
 //!   - the CDATA trigger is ASCII-case-insensitive.
 //!   - a `</name` close match requires a real name boundary, so
 //!     `</prefix>` does not close `<pre>`.
@@ -77,10 +77,10 @@ fn invisible_codepoint_refs_fail_closed_as_anomaly() {
 
 #[test]
 fn overlong_hex_ref_in_markdown_is_inert() {
-    // 7 hex digits exceed the CommonMark bound (6): the renderer leaves this
-    // literal, so nothing hides and nothing may fire — not the fabricated
-    // "delve" (A001), not the ref's own `;` (M002), and, in markdown prose,
-    // not an anomaly either.
+    // Seven hex digits exceed the CommonMark bound of six. The renderer
+    // leaves the reference literal, so nothing hides and every relevant rule
+    // must stay silent. This excludes fabricated `"delve"` (A001), the
+    // reference's own `;` (M002), and an anomaly in markdown prose.
     let text = format!("{f}\n\nOrdinary &#x0000064;elve detail.\n", f = filler());
     let report = run(&text, Profile::Doc);
     for rule in ["SLOP-A001", "SLOP-M002", "SLOP-M005"] {
@@ -95,7 +95,7 @@ fn overlong_hex_ref_in_markdown_is_inert() {
 
 #[test]
 fn overlong_ref_in_html_text_fails_closed_without_m002() {
-    // A browser decodes `&#0000000169;` (©); the CommonMark grammar rejects
+    // A browser decodes `&#0000000169;` (©). The CommonMark grammar rejects
     // it. In HTML-derived text that divergence fails closed as M005, and the
     // undecoded ref's `;` must not read as prose punctuation (M002).
     let text = format!(
@@ -119,9 +119,9 @@ fn overlong_ref_in_html_text_fails_closed_without_m002() {
 
 #[test]
 fn semicolonless_ref_in_html_text_fails_closed() {
-    // A browser renders `&#100elve` as "delve" (missing-semicolon recovery);
-    // the decoder correctly refuses, so the divergence must fail closed
-    // rather than silently pass the hidden word.
+    // A browser renders `&#100elve` as `"delve"` through missing-semicolon
+    // recovery. The decoder correctly refuses. The divergence must fail
+    // closed to catch the hidden word.
     let text = format!(
         "{f}\n\n<div>Ordinary &#100elve detail.</div>\n",
         f = filler()
@@ -141,7 +141,7 @@ fn semicolonless_ref_in_html_text_fails_closed() {
 
 #[test]
 fn semicolonless_ref_in_markdown_is_inert() {
-    // CommonMark leaves `&#100elve` fully literal — the reader sees the
+    // CommonMark leaves `&#100elve` fully literal, the reader sees the
     // junk, nothing hides, nothing fires.
     let text = format!("{f}\n\nOrdinary &#100elve detail.\n", f = filler());
     let report = run(&text, Profile::Doc);
@@ -154,11 +154,11 @@ fn semicolonless_ref_in_markdown_is_inert() {
     }
 }
 
-// Guardrails — legitimate references still decode normally -----------------
+// Guardrails, legitimate references still decode normally -----------------
 
 #[test]
 fn ordinary_refs_still_decode_and_do_not_anomaly_flag() {
-    // Em-dash spellings decode (and correctly reach M001, the em-dash rule);
+    // Em-dash spellings decode (and correctly reach M001, the em-dash rule).
     // no anomaly.
     for dash in ["&#8212;", "&#x2014;"] {
         let text = format!("{f}\n\nRanges run 3{dash}5 wide here.\n", f = filler());
@@ -174,8 +174,8 @@ fn ordinary_refs_still_decode_and_do_not_anomaly_flag() {
             rule_ids(&report)
         );
     }
-    // © and é decode; space-separator refs fold to a plain space like
-    // &nbsp;/&emsp; do (and a folded space still reaches two-word patterns).
+    // © and é decode. Space-separator refs fold to a plain space like
+    // `&nbsp;/&emsp;` do (and a folded space still reaches two-word patterns).
     let text = format!(
         "{f}\n\nCopyright &#169; 2026 by the caf&#233; project.\n",
         f = filler()
@@ -219,7 +219,7 @@ fn tab_indented_fence_close_at_eof_fails_closed() {
 #[test]
 fn list_nested_tab_close_is_a_real_close() {
     // Inside a `- ` item (content column 2) the closing line `  \t~~~` puts
-    // the fence at column 4 — 2 columns past the container, a valid close.
+    // the fence at column 4, 2 columns past the container, a valid close.
     // Counting the item's own spaces as indent and reading the tab as a
     // run-breaking char would raise a false unclosed-fence M005.
     let text = format!("{f}\n\n- ~~~\n  code\n  \t~~~", f = filler());
@@ -296,7 +296,7 @@ fn attribute_value_slash_is_not_self_closing() {
 fn lowercase_cdata_fails_closed_like_uppercase() {
     // Block-HTML context (`<div>` is a CommonMark type-6 tag, `<svg>` is
     // not): a case-sensitive trigger swallowed `<![cdata[ … ]]>` as tag
-    // markup with no finding — invisible to a browser (bogus comment) AND
+    // markup with no finding, invisible to a browser (bogus comment) and
     // unscanned. It trips the same case-insensitive CDATA anomaly as
     // `<![CDATA[`.
     let text = format!("{f}\n\n<div><![cdata[ delve ]]></div>\n", f = filler());
@@ -313,7 +313,7 @@ fn lowercase_cdata_fails_closed_like_uppercase() {
 #[test]
 fn close_tag_requires_name_boundary() {
     // A boundary-less match reads `</pre` inside `</prefix>`, ending the skip
-    // early and leaking the rest of the code body ("delve game-changer") to
+    // early and leaking the rest of the code body (`"delve game-changer"`) to
     // the prose scan. With the boundary rule the body runs to the real
     // `</pre>`.
     let text = format!(
@@ -333,12 +333,12 @@ fn close_tag_requires_name_boundary() {
     );
 }
 
-// M005 dominance — absolute floor plus ratio -------------------------------
+// M005 dominance, absolute floor plus ratio -------------------------------
 
 #[test]
 fn badge_header_readme_clears_dominance_floor() {
     // An idiomatic centered badge header: ~700 bytes of pure markup in a
-    // ~1.5 KB README — over the 20% ratio, under the 800-byte floor.
+    // ~1.5 KB README, over the 20% ratio, under the 800-byte floor.
     let text = "<div align=\"center\">\n  <img src=\"assets/logo.png\" alt=\"logo\" width=\"120\">\n  <p>\n    <a href=\"https://crates.io/crates/demo-tool\"><img src=\"https://img.shields.io/crates/v/demo-tool.svg\" alt=\"crates.io\"></a>\n    <a href=\"https://docs.rs/demo-tool\"><img src=\"https://docs.rs/demo-tool/badge.svg\" alt=\"docs.rs\"></a>\n    <a href=\"https://github.com/org/demo-tool/actions\"><img src=\"https://img.shields.io/badge/ci-passing-green.svg\" alt=\"ci\"></a>\n    <a href=\"LICENSE\"><img src=\"https://img.shields.io/badge/license-MIT-blue.svg\" alt=\"license\"></a>\n  </p>\n</div>\n\n# demo-tool\n\nReads records from an input file and writes them back out in a stable order.\nThe command line takes a path and an optional format flag.\n\n## Usage\n\nInstall the binary with cargo, point it at a file, and read the exit code.\nA zero exit means every record parsed; anything else names the first bad line.\n\n## Notes\n\nThe format is documented in the spec file next to this readme, and the parser\naccepts either line ending. Large files stream in constant memory, and the\nrecord order in the output always matches the order of the input exactly.\nErrors go to standard error with the line number and the offending column.\nThe exit codes are listed in the manual page installed beside the binary.\n";
     assert!(
         text.len() > 1200 && text.len() < 2000,
@@ -355,7 +355,7 @@ fn badge_header_readme_clears_dominance_floor() {
 #[test]
 fn small_tag_soup_below_floor_is_accepted() {
     // ~400 bytes of pure markup: over the ratio, under the floor. An
-    // accepted edge — dominance is a coverage signal; every hiding
+    // accepted edge, dominance is a coverage signal. Every hiding
     // construct is independently fail-closed.
     let text = "<div class=\"a\" data-x=\"1\" id=\"root\" role=\"main\" style=\"display:flex\">\n<span class=\"i\" data-k=\"v\"></span><span class=\"i\" data-k=\"w\"></span>\n<div class=\"b\" style=\"color:red;padding:4px;margin:2px;border:1px solid black\"></div>\n</div>\n";
     assert!(text.len() < 800, "fixture stays under the floor");
@@ -388,7 +388,7 @@ fn hidden_html_heavy_doc_still_trips_dominance() {
 // The execution-confirmed shapes: `del\u{00AD}ve` (soft hyphen),
 // `del\u{200E}ve` (LRM), `del\u{202A}ve` (LRE) exited CLEAN when the
 // literal-path checks keyed on the 5-char ZERO_WIDTH set. The norm view
-// removes the FULL Unicode Default_Ignorable_Code_Point set (including
+// removes the full Unicode Default_Ignorable_Code_Point set (including
 // non-Cf members like CGJ U+034F and variation selectors), so the word
 // normalizes to its plain spelling and the lexicon fires directly.
 
@@ -422,7 +422,7 @@ fn literal_default_ignorables_cannot_hide_lexicon_words() {
 #[test]
 fn numeric_refs_to_default_ignorables_still_anomaly() {
     // The REF spelling of the same codepoints keeps the same answer:
-    // fail-closed M005, never decoded, no fabricated word — in markdown AND
+    // fail-closed M005, never decoded, no fabricated word, in markdown and
     // HTML contexts. `&#847;` (CGJ), `&#xFFA0;`, and `&#xFE0E;` cover the
     // non-Cf default-ignorables, which once decoded as
     // ordinary chars. `&#x2064;` (INVISIBLE PLUS, Cf) is the control proving
@@ -453,9 +453,9 @@ fn numeric_refs_to_default_ignorables_still_anomaly() {
 #[test]
 fn soft_hyphen_hyphenation_hint_stays_clean() {
     // The legitimate use of U+00AD: a hyphenation hint inside a long
-    // non-lexicon word. Removal must not create a spurious finding — no
+    // non-lexicon word. Removal must not create a spurious finding, no
     // fabricated lexicon hit, no anomaly, no M004 (whose pattern class
-    // deliberately stays the original zero-width set).
+    // stays the original zero-width set).
     let text = format!(
         "{f}\n\nThe in\u{00AD}ternation\u{00AD}alization effort continues on schedule.\n",
         f = filler()

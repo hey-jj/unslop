@@ -1,6 +1,6 @@
 # SLOP-I005 stacked hedges. Candidate tier, every profile. Each entry carries
-# at least two uncertainty signals, which is what makes it a stack rather than
-# a hedge. Single softeners moved to words/softeners.txt (SLOP-I006).
+# at least two uncertainty signals, which makes it a stack. Single softeners
+# moved to words/softeners.txt (SLOP-I006).
 could potentially
 might possibly
 may perhaps

@@ -21,7 +21,7 @@ fn shorter_closing_fence_leaves_the_block_open_to_eof() {
     // A four-backtick block is not closed by a three-backtick line: pulldown
     // enforces CommonMark fence-close-length, so the tail runs to EOF inside
     // the code block. Its non-fence last line makes the fence unclosed and
-    // SLOP-M005 fires. This holds with NO open-length tracking in the crate:
+    // SLOP-M005 fires. This holds with no open-length tracking in the crate:
     // separate open-length tracking is inert for this shape (it changes only
     // the no-tail "````\ncode\n```" case, which hides no content).
     // See html_prose_and_fences.rs::short_fence_with_slop_tail_fails_closed.
@@ -79,12 +79,12 @@ fn closed_html_comment_is_not_a_structural_anomaly() {
 // Visible HTML text ---------------------------------------------------------
 // The blanket Y002-on-visible-text signal is retired: the
 // text is extracted and scanned as prose. Non-slop visible text does not
-// raise Y002 (that was a false positive on legitimate HTML); the positive
+// raise Y002 (that was a false positive on legitimate HTML). The positive
 // scanning path lives in html_prose_and_fences.rs.
 
 #[test]
 fn nonslop_visible_html_block_text_no_longer_forces_y002() {
-    // Reader-visible text that carries no slop must NOT raise Y002 just for
+    // Reader-visible text that carries no slop must not raise Y002 just for
     // existing. It is scanned as prose and stays clean.
     let text =
         "Intro paragraph here.\n\n<div>\nordinary release notes the reviewer never saw\n</div>\n";
@@ -112,9 +112,9 @@ fn html_block_without_visible_text_does_not_diverge() {
 
 #[test]
 fn p002_generalized_regex_scans_link_urls() {
-    // turn9news5 is not one of the fixed literals (turn0news is), so only the
-    // generalized regex can catch it. Without a regex pass over link
-    // URLs it goes unreported.
+    // `turn9news5` falls outside the fixed literals, which include
+    // `turn0news`. Only the generalized regex can catch it. Without a regex
+    // pass over link URLs it goes unreported.
     let text = "See [details](https://e.test/turn9news5) for context.\n";
     let report = run(text, Profile::Doc);
     assert!(
@@ -133,9 +133,9 @@ fn p002_generalized_regex_scans_link_urls() {
 
 #[test]
 fn p002_url_match_reports_full_span_not_truncated_literal() {
-    // turn1search IS a fixed literal; the generalized regex captures the
-    // trailing digit too. Overlap resolution must keep the full match, not
-    // the truncated literal.
+    // `turn1search` is a fixed literal. The generalized regex also captures
+    // the trailing digit. Overlap resolution must keep the full match and
+    // exclude the truncated literal.
     let text = "See [details](https://e.test/turn1search2) for context.\n";
     let report = run(text, Profile::Doc);
     let spans: Vec<&str> = report
@@ -166,7 +166,7 @@ fn overlapping_adapter_is_linear_on_adversarial_digit_run() {
         elapsed < std::time::Duration::from_secs(2),
         "adversarial digit run took {elapsed:?}, expected well under a second"
     );
-    // It still fires: the bounded form matches the leading turn1news5.
+    // It still fires: the bounded form matches the leading `turn1news5`.
     assert!(
         has_rule(&report, "SLOP-P002"),
         "bounded P002 must still fire on the prose artifact"

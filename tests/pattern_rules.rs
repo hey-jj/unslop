@@ -162,7 +162,7 @@ fn o005_participial_tail_needs_the_block_final_position() {
         &[
             // Mid-block: the clause does not close the block.
             "The council met twice, ensuring every objection was heard. Two passed.\n",
-            // Opening a sentence rather than closing one.
+            // This occurrence opens a sentence.
             "Ensuring every objection was heard, the council met twice.\n",
             // No comma, so no tail.
             "The council met twice ensuring every objection was heard.\n",
@@ -210,7 +210,7 @@ fn c010_false_range_needs_a_range_signal_and_unscaled_endpoints() {
             // Real scales.
             "Attendance ranges from 30 to 200 people.\n",
             "The season spans from March to September.\n",
-            // No range signal: movement, not a claimed scale.
+            // The movement sentence carries no range signal or claimed scale.
             "The walk took us from London to Dover in two days.\n",
         ],
     );
@@ -508,7 +508,7 @@ fn l001_reads_irregular_participles_and_any_actor() {
     );
 }
 
-/// A by-phrase naming a time is a deadline, not an actor.
+/// The actor test excludes by-phrases that name a deadline.
 #[test]
 fn l001_ignores_a_temporal_by_phrase() {
     assert_silent(
@@ -591,7 +591,7 @@ fn c010_arms_and_suppressions() {
             // Arm A, a breadth signal anywhere in the sentence.
             "The book covers everything from philosophy to cooking.\n",
             "Her work ranges from portraiture to civic planning.\n",
-            // Arm B, a category head immediately before from.
+            // Arm B, a category head directly before from.
             "Topics from algebra to poetry appear in one week.\n",
         ],
     );
@@ -734,7 +734,7 @@ fn the_guard_holds_both_thresholds() {
     );
 }
 
-/// The field-line shape is tight on purpose. A definition list writes several
+/// The field-line shape is tight. A definition list writes several
 /// words after its colon and is prose, so it must not read as a field.
 #[test]
 fn a_definition_list_is_not_a_field_line() {
@@ -768,7 +768,7 @@ fn a_definition_list_is_not_a_field_line() {
 
 /// A document that quotes code is a document. The prose and code split is the
 /// extractor's own, so every fence style and an indented block all count as
-/// code rather than as prose lines.
+/// code.
 #[test]
 fn a_document_that_quotes_code_stays_prose() {
     let backtick = concat!(
@@ -917,8 +917,8 @@ fn a_pasted_bullet_does_not_move_the_block_start() {
 
 /// Text mode has no parser to strip list markers, so the extractor opens the
 /// prose range past the marker run itself. Without that, every rule anchored
-/// to a block start read the position after the marker rather than the
-/// position a reader sees.
+/// to a block start read the position after the marker. The reader sees the
+/// content after all markers.
 #[test]
 fn text_mode_reads_past_a_list_marker() {
     let fires_text = |text: &str, id: &str| {
@@ -998,10 +998,10 @@ fn v002_no_longer_reads_a_reviewer_catching_something() {
     }
 }
 
-/// fair hit is the concession entry and carries no anchor, because position
+/// `fair hit` is the concession entry and carries no anchor, because position
 /// tells nothing apart here: opening a reply with it and writing it mid
 /// sentence are the same tell. Two collisions ride on it and both reach the
-/// judge rather than an exemption.
+/// judge question. It carries no exemption.
 #[test]
 fn v002_reads_fair_hit_wherever_it_sits() {
     assert_fires(
@@ -1123,9 +1123,9 @@ fn c004_tells_concessive_while_from_temporal_while() {
 /// one.
 #[test]
 fn c004_participial_drop_needs_a_clause_with_no_finite_verb() {
-    // A finite verb means the -ing word modifies a noun or stands as a
-    // subject. Both of these were measured as concessions the drop lost
-    // before the gate existed.
+    // A finite verb means the -ing word modifies a noun or is a subject. Both
+    // of these were measured as concessions the drop lost before the gate
+    // existed.
     assert_fires(
         "SLOP-C004",
         Profile::GeneralWriting,
@@ -1138,7 +1138,7 @@ fn c004_participial_drop_needs_a_clause_with_no_finite_verb() {
             "While running totals do drift, the ledger reconciles.\n",
         ],
     );
-    // be, been, and being are deliberately out of the finite set, so a
+    // be, been, and being are out of the finite set, so a
     // participial clause built on them still drops.
     assert_silent(
         "SLOP-C004",
@@ -1264,7 +1264,8 @@ fn c004_reads_list_markers_and_block_edges_correctly() {
 }
 
 /// SLOP-A002 reads every homograph's past tense the same way it reads the
-/// present: harness structurally, navigate and landscape from the word set.
+/// present form: `harness` matches structurally, and `navigate` and
+/// `landscape` match through the word set.
 #[test]
 fn a002_reads_the_past_tense() {
     assert_fires(

@@ -58,7 +58,7 @@ fn no_word_set_rule_fires_from_inside_a_code_fence() {
         if rule.kind != MatchKindSpec::WordSet || rule.lifecycle == policy::Lifecycle::Deprecated {
             continue;
         }
-        // The injection family scans all regions by design; raw-view and
+        // The injection family scans all regions. Raw-view and
         // scoped rules are outside the prose segmentation guarantee.
         if rule.id == "SLOP-J001" || rule.view == View::Raw || rule.scope != Scope::None {
             continue;
@@ -176,8 +176,9 @@ fn w002_provenance_positives_fire_candidate_on_readme() {
 }
 
 /// Domain uses of `provenance` (data, supply-chain) still fire and reach the
-/// judge: adjudicating domain legitimacy is the human's call, never an
-/// exemption. The assertion pins presence AND tier.
+/// judge as candidates. Domain legitimacy requires
+/// adjudication and creates no exemption. The assertion checks both presence
+/// and tier.
 #[test]
 fn w002_domain_provenance_reaches_the_judge_as_candidate() {
     let config = Config::new(Profile::Doc);
@@ -192,8 +193,8 @@ fn w002_domain_provenance_reaches_the_judge_as_candidate() {
 }
 
 /// The exemption keeps the specification sense: `reference implementation
-/// of` names a conformance relationship and stays silent, while the bare
-/// noun phrase is a lineage claim and fires.
+/// of` names a conformance relationship and stays silent. The bare noun
+/// phrase is a lineage claim and fires.
 #[test]
 fn w002_exempts_the_specification_sense() {
     let config = Config::new(Profile::Doc);

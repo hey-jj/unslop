@@ -70,27 +70,25 @@ pub fn prepare(input: &[u8], config: &Config) -> Result<Prepared, AnalysisError>
     })
 }
 
-/// Rust-source shape test for prose input, run by `analyze` AFTER extraction
-/// so the prose and code split is the real extractor's segmentation.
-/// `code_blocks` is the extractor's code-BLOCK region list, covering backtick
-/// fences, tilde fences, and four-space indented blocks alike, so a line
-/// overlapping any code block is code and never counts. A guide with a long
-/// indented listing and a post with a tilde-fenced sample both stay prose.
+/// Rust-source shape test for prose input, run by `analyze` after extraction
+/// so prose and code use the real extractor's segmentation. `code_blocks` is
+/// the extractor's code-block region list. It covers backtick fences, tilde
+/// fences, and four-space indented blocks. A line overlapping any code block
+/// is code and never counts. A guide with a long indented listing and a post
+/// with a tilde-fenced sample both stay prose.
 ///
-/// A source file gated as prose draws its findings from statement
-/// punctuation instead of from writing, which is why the guard rejects it
-/// outright rather than reporting on it.
+/// The guard rejects source files outright because statement punctuation
+/// would reach writing rules.
 ///
-/// Scope is deliberately narrow. The test reads Rust shape, and nothing else.
-/// Source in another language reaches the rules and produces findings a reader
-/// discounts, which is the documented trade for a guard that does not fire on
-/// prose. The guard catches a mistake, and it is not a security boundary: a
-/// writer who prefixes every line with a comment marker gets past it, which is
-/// deliberate and recorded.
+/// The test reads Rust shape only. Other languages reach the rules and
+/// produce syntax-punctuation findings that readers must discount. The guard
+/// never fires on prose. It catches accidental source input and supplies no
+/// security boundary. Prefixing every line with a comment marker evades it.
+/// This evasion is allowed and documented.
 ///
-/// Returns `Some((code_lines, nonblank_lines))` when at least
-/// `SOURCE_GUARD_MIN_LINES` lines carry code structure and they are at least
-/// `SOURCE_GUARD_MIN_PCT` percent of the non-blank outside-code lines.
+/// Return `Some((code_lines, nonblank_lines))` when at least
+/// `SOURCE_GUARD_MIN_LINES` lines carry code structure and they form at least
+/// `SOURCE_GUARD_MIN_PCT` percent of nonblank outside-code lines.
 const SOURCE_GUARD_MIN_LINES: usize = 8;
 const SOURCE_GUARD_MIN_PCT: usize = 35;
 
@@ -137,7 +135,7 @@ pub fn source_line_counts(text: &str, code_blocks: &[Range<usize>]) -> (usize, u
 /// excludes, so counting it costs no prose and closes most of the
 /// comment-prefix evasion as a side effect.
 ///
-/// Arm 2 needs both halves. The line has to end on a code terminator AND
+/// Arm 2 needs both halves. The line has to end on a code terminator and
 /// either open with an item or binding keyword, optionally behind a
 /// visibility or modifier word, or carry a path, arrow, or fat-arrow token,
 /// or be a field line. Requiring both is what keeps prose out: a sentence
@@ -180,7 +178,7 @@ fn code_shaped_line(t: &str) -> bool {
         || field_line(t)
 }
 
-/// The field-line shape, kept tight on purpose: one identifier, a colon, ONE
+/// The field-line shape, kept tight: one identifier, a colon, ONE
 /// type expression carrying no sentence structure, then a comma, optionally
 /// behind `pub` or `pub(crate)`. A definition list writes several words after
 /// its colon, so `- name: the person who signed,` never matches, and a bare

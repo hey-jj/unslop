@@ -5,11 +5,10 @@
 //! The scan runs over the norm view (NFC, entity decode, escape resolution,
 //! invisible removal, soft-break folding, U+FFFD barriers at code spans) and
 //! maps spans back through the segment table the way the shared engine does.
-//! Markers are matched word by word over the token sequence rather than as
-//! raw byte substrings, so a marker split across a wrapped line still
-//! matches and a marker inside a longer word never does. Every window is
-//! bounded by the sentence it sits in, honoring the crate-wide ban on
-//! unbounded scans.
+//! Markers match whole words in the token sequence, so a marker split across
+//! a wrapped line still matches and a marker inside a longer word never does.
+//! Every window is bounded by the sentence it sits in, honoring the
+//! crate-wide ban on unbounded scans.
 
 use super::contrast::{is_tool_noun, phrase_at, phrase_words, shared_tool_nouns};
 use super::sentence::{bare, blocks, param_words, push_norm_hit, sentences, word_tokens};

@@ -321,9 +321,9 @@ pub struct PolicyPackage {
     pub digest: String,
     pub quotation_downgrade: Vec<String>,
     /// Rules whose hits inside claimed-quotation regions are dropped at
-    /// report resolution rather than downgraded. A candidate-tier rule has
-    /// no lower blocking state, so suppression is the quotation semantics
-    /// that fits it.
+    /// report resolution. Suppression skips the downgrade path. A candidate-tier
+    /// rule has no lower blocking state,
+    /// so suppression is the quotation semantics that fits it.
     pub quotation_suppress: Vec<String>,
     pub profile_names: Vec<String>,
     pub profiles: Vec<ProfileDef>,
@@ -741,7 +741,7 @@ pub fn load() -> Result<PolicyPackage, String> {
         }
     }
 
-    // A typo in a quotation-semantics list would silently no-op; fail loud.
+    // A typo in a quotation-semantics list would silently no-op. Fail loud.
     for id in quotation_downgrade.iter().chain(quotation_suppress.iter()) {
         if !rules.iter().any(|r| &r.id == id) {
             return Err(format!("quotation semantics list names unknown rule {id}"));

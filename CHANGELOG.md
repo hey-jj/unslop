@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.6] - 2026-10-03
+
+### Documentation
+
+- Rustdoc, code comments, and lexicon file comments read in the house style
+  for shipped prose.
+
+### Changed
+
+- Policy guard text and one judge prompt use the same style. The
+  regenerated rule reference carries the new text.
+
 ## [0.1.5] - 2026-09-29
 
 ### Added

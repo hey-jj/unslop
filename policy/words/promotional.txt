@@ -1,6 +1,6 @@
 # SLOP-A007 promotional language. Blocking set. Travel-brochure and
 # press-release diction. vibrant, bustling, groundbreaking, and world-class
-# are owner terms already held by SLOP-A001 and are not repeated here.
+# stay with SLOP-A001. This lexicon excludes those four terms.
 nestled
 breathtaking
 renowned

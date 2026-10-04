@@ -5,19 +5,16 @@
 //! the marked divider below.
 //! The C007 T2-T4 trigger forms are declared as bounded `patterns` on the
 //! policy block and served by the shared regex engine with span mapping and
-//! trigger fidelity inherited; this module implements only the tail form,
+//! trigger fidelity inherited. This module implements only the tail form,
 //! which is where the imperative-opener and second-person suppression logic
 //! lives. E001 precedent: bounded hand-rolled scans over policy params, no
 //! regex, no new dependency.
 //!
-//! The scan runs over the norm view (NFC, entity decode, escape resolution,
-//! invisible removal, soft-break folding; prose-only with U+FFFD barriers at
-//! code spans, so flanking text never fuses across a code region). Every
-//! window is bounded by policy params, honoring the crate-wide ban on
-//! unbounded scans. FP-safety is the design bias: every suppression doubt
-//! resolves toward silence, and the one deliberate inversion — a clause
-//! whose start lies beyond the walk-back window fires by default — is the
-//! spec's fail-toward-candidate-report choice.
+//! The scan uses the norm view with NFC, entity decoding, escape resolution,
+//! invisible removal, and soft-break folding. U+FFFD barriers separate prose
+//! across code spans. Every scan is bounded by policy limits. FP-safety is
+//! the bias: uncertain suppression checks drop the finding. A clause start beyond the walk-back
+//! window reports a candidate by default.
 
 use super::sentence::{bare, blocks, param_words, push_norm_hit, sentences, word_tokens};
 use crate::engine::{CompiledPolicy, Hit};
@@ -92,21 +89,20 @@ fn contains_word(hay_lower: &str, needle: &str) -> bool {
     false
 }
 
-/// Bounded terminal test for a `.` met during the NP scan or the clause
-/// walk-back. `dot_end` is the offset just past the `.` in `text`. A period
-/// followed directly by an alphanumeric character is abbreviation- or
-/// number-internal (`U.S`, `3.5`): not a terminal. A period followed by a
-/// bounded ASCII space/tab run and then a lowercase continuation is
-/// mid-sentence punctuation (`U.S. but`, `e.g. the`): not a terminal.
-/// Everything else — end of text, a line break, an uppercase/digit/quote/
-/// bracket/barrier follower, a whitespace run past the parser's 8-unit
-/// bound — is a terminal, exactly as before this test existed. The peek is
-/// O(1) and bounded, honoring the crate-wide ban on unbounded scans.
-/// Accepted false negatives (KNOWN-EDGES): chat-style prose that starts
-/// sentences lowercase reads a real terminal as a continuation and stays
-/// silent, and an abbreviation followed by a capitalized word (`Mr. Smith`)
-/// still reads as a terminal — both resolve toward silence or the
-/// pre-existing behavior, never toward a new firing surface.
+/// Bounded terminal test for a `.` met during NP scanning or clause
+/// walk-back. `dot_end` is the offset just past the period in `text`. A
+/// period directly followed by an alphanumeric character is internal to an
+/// abbreviation or number (`U.S`, `3.5`) and never terminates. A bounded
+/// ASCII space/tab run followed by lowercase marks mid-sentence punctuation
+/// (`U.S. but`, `e.g. the`) and never terminates. Everything else terminates:
+/// end of text, a line break, uppercase, digit, quote, bracket or barrier
+/// followers, and whitespace beyond the parser's 8-unit bound. This preserves
+/// the earlier terminal behavior. The peek takes bounded O(1) work and honors
+/// the crate-wide ban on unbounded scans. KNOWN-EDGES records two accepted
+/// false negatives. Chat-style lowercase sentence starts read a real terminal
+/// as continuation and stay silent. An abbreviation followed by a capitalized
+/// word (`Mr. Smith`) still reads as a terminal. Both preserve silence or
+/// earlier behavior and add no firing surface.
 pub(crate) fn period_is_terminal(text: &str, dot_end: usize) -> bool {
     let mut chars = text[dot_end..].chars();
     let Some(first) = chars.next() else {
@@ -116,7 +112,7 @@ pub(crate) fn period_is_terminal(text: &str, dot_end: usize) -> bool {
         return false; // abbreviation- or number-internal
     }
     if first != ' ' && first != '\t' {
-        // Line breaks end the block; quotes, brackets, punctuation, and the
+        // Line breaks end the block. Quotes, brackets, punctuation, and the
         // U+FFFD barrier all sit on the terminal side.
         return true;
     }
@@ -141,25 +137,22 @@ pub(crate) fn period_is_terminal(text: &str, dot_end: usize) -> bool {
 /// Parse the T1 tail shape starting at the comma at `comma`: up to 8
 /// whitespace characters, `not` or `never` (case-insensitive, followed by
 /// 1..=8 whitespace), then an NP of 1..=`np_max` bytes containing none of
-/// `!?;:,\n` (nor a U+FFFD barrier) and at least one non-whitespace
-/// character (a whitespace-only "NP" is not a noun phrase), closed by a
-/// terminal `.`, `!`, or `?`. A non-terminal `.` (abbreviation-internal or
-/// mid-sentence per `period_is_terminal`) is legal NP content. Returns the
-/// exclusive end offset of the terminal punctuation. The
-/// no-interior-comma constraint is what keeps the parenthetical
-/// `X, not Y, verb ...` interpolation out of scope, and a word-bounded
-/// `but` anywhere in the NP rejects the tail outright: a contrastive
-/// continuation (`, not in the U.S. but in Asia.`) is the not-X-but-Y pair
-/// form — SLOP-C008's territory and a legitimate contrast — never a bare
-/// apophatic caveat.
-/// Both whitespace loops match ASCII whitespace only (space/tab/LF/CR),
-/// by design: a non-ASCII space inside a contrastive tail is an
-/// attacker-unrealistic vector (see KNOWN-EDGES).
-/// Words that end in -ing without being participles. Declared once and read
-/// by both rules that ask the question: the apophatic tail parser below, and
-/// SLOP-C004's participial `while` drop in the engine. Two copies of a closed
-/// set drift, one does not, which is the same reason the tool nouns live in
-/// one place.
+/// `!?;:,\n` (nor a U+FFFD barrier) and at least one non-whitespace character
+/// (a whitespace-only "NP" is not a noun phrase), closed by a terminal `.`,
+/// `!`, or `?`. A non-terminal `.` (abbreviation-internal or mid-sentence per
+/// `period_is_terminal`) is legal NP content. Returns the exclusive end
+/// offset of the terminal punctuation. The no-interior-comma constraint is
+/// what keeps the parenthetical `X, not Y, verb ...` interpolation out of
+/// scope, and a word-bounded `but` anywhere in the NP rejects the tail
+/// outright: a contrastive continuation (`, not in the U.S. but in Asia.`) is
+/// the not-X-but-Y pair form handled by SLOP-C008. This tail parser excludes
+/// it. Both whitespace loops match ASCII whitespace only (space/tab/LF/CR),
+/// because a non-ASCII space inside a contrastive tail is an
+/// attacker-unrealistic vector (see KNOWN-EDGES). Words that end in -ing
+/// without being participles. Declared once and read by both rules that ask
+/// the question: the apophatic tail parser below, and SLOP-C004's participial
+/// `while` drop in the engine. Two copies of a closed set drift, one does
+/// not, which is the same reason the tool nouns live in one place.
 pub(crate) const NON_PARTICIPLE_ING: &[&str] =
     &["nothing", "anything", "something", "everything", "during"];
 
@@ -197,8 +190,9 @@ fn parse_tail(text: &str, comma: usize, np_max: usize) -> Option<usize> {
         }
     }
     let after_ws = &rest[i..];
-    // `get` rather than direct slicing: the byte at the cut can sit inside a
-    // multi-byte character, and a directly sliced prefix would panic there.
+    // `get` checks the slice boundary because the byte at the cut can sit
+    // inside a multi-byte character, and a directly sliced prefix would panic
+    // there.
     let kw_len = if after_ws
         .get(..5)
         .is_some_and(|s| s.eq_ignore_ascii_case("never"))
@@ -213,7 +207,7 @@ fn parse_tail(text: &str, comma: usize, np_max: usize) -> Option<usize> {
         return None;
     };
     // The keyword must be followed by 1..=8 ASCII whitespace characters
-    // (its right word boundary). ASCII-only by design, deliberately
+    // (its right word boundary). ASCII-only,
     // narrower than a Unicode `\s{1,8}`: a non-ASCII space here is an
     // accepted false negative (see KNOWN-EDGES).
     let mut j = i + kw_len;
@@ -229,21 +223,20 @@ fn parse_tail(text: &str, comma: usize, np_max: usize) -> Option<usize> {
     if ws == 0 {
         return None;
     }
-    // A participial adjunct is not a noun phrase. Where the negation runs
-    // straight into an -ing word with no determiner between them, the tail
-    // says how someone did something ("never judging anyone", "not making a
-    // fuss"), which is a manner clause and not the apophatic caveat this
-    // trigger reads. A determiner in between marks a genuine noun ("not the
-    // beginning"), so the test is adjacency and nothing else. Five words end
+    // A participial adjunct falls outside noun phrases. When negation runs
+    // directly into an -ing word without a determiner, the tail describes how
+    // someone acted (`"never judging anyone"`, `"not making a fuss"`). This
+    // trigger excludes that manner clause. A determiner marks a genuine noun
+    // (`"not the beginning"`), so adjacency is the whole test. Five words end
     // in -ing without being participles and are denied: the four quantifier
-    // pronouns, plus during, which is denied so the participle test stays
-    // correct rather than to settle whether a tail like "not during matching"
-    // should fire, a separate question about this trigger's scope.
+    // pronouns and `during`. Excluding `during` keeps the participle test
+    // correct. Whether `"not during matching"` should fire is a separate
+    // question about this trigger's scope.
     if participial_adjunct(&rest[j..]) {
         return None;
     }
     // NP scan: bounded, no clause punctuation, must close with a terminal,
-    // and must carry at least one non-whitespace character — an empty or
+    // and must carry at least one non-whitespace character, an empty or
     // whitespace-only span between the keyword and the terminal is not a
     // noun phrase.
     let np_start = j;
@@ -253,7 +246,7 @@ fn parse_tail(text: &str, comma: usize, np_max: usize) -> Option<usize> {
         match c {
             '.' if !period_is_terminal(text, comma + 1 + k + 1) => {
                 // Abbreviation-internal or mid-sentence period (`U.S.`,
-                // `e.g.`): NP content, not a terminal.
+                // `e.g.`): part of the noun phrase.
                 np_has_content = true;
                 k += 1;
                 if k - np_start > np_max {
@@ -265,11 +258,11 @@ fn parse_tail(text: &str, comma: usize, np_max: usize) -> Option<usize> {
                     return None; // empty or whitespace-only NP
                 }
                 // A word-bounded `but` inside the tail means the negation
-                // carries its own contrastive continuation ("not in the
-                // U.S. but in Asia"): a not-X-but-Y pair, which is a
-                // legitimate contrast shape and SLOP-C008's territory, not
-                // a bare apophatic caveat. The comma-tail rule stays
-                // silent. Bounded: the NP is at most `np_max` bytes.
+                // carries its own contrastive continuation ("not in the U.S.
+                // but in Asia"): a not-X-but-Y pair, which is a contrast
+                // shape handled by SLOP-C008. This tail parser excludes it.
+                // The comma-tail rule stays silent. Bounded: the NP is at
+                // most `np_max` bytes.
                 let np_lower = rest[np_start..k].to_ascii_lowercase();
                 if contains_word(&np_lower, "but") {
                     return None;
@@ -291,18 +284,18 @@ fn parse_tail(text: &str, comma: usize, np_max: usize) -> Option<usize> {
     None
 }
 
-/// Recover the clause start: walk back from the comma at most `window`
-/// bytes to the nearest clause boundary — a line break, or terminal
-/// punctuation (`.`, `!`, `?`, plus `:` per the design) followed by
-/// whitespace — mirroring the engine's own block-start notion
-/// (`NormView::is_block_start`) as a single bounded backward pass. A `.`
-/// additionally goes through `period_is_terminal`, so an abbreviation
-/// (`the U.S. market`) no longer truncates the recovered clause — the
-/// suppression classifier sees the whole sentence, an FP-reducing change.
-/// The `:` `!` `?` arms are untouched: a colon followed by lowercase is a
-/// legitimate clause boundary and must stay one. Offset 0
-/// counts as a boundary when it lies inside the window. `None` means the
-/// window was exhausted without a boundary; the caller fires by default.
+/// Recover the clause start: walk back from the comma at most `window` bytes
+/// to the nearest clause boundary, a line break, or terminal punctuation
+/// (`.`, `!`, `?`, plus `:` per the design) followed by whitespace, mirroring
+/// the engine's own block-start notion (`NormView::is_block_start`) as a
+/// single bounded backward pass. A `.` also goes through
+/// `period_is_terminal`, so an abbreviation (`the U.S. market`) no longer
+/// truncates the recovered clause, the suppression classifier sees the whole
+/// sentence, an FP-reducing change. The `:` `!` `?` arms are untouched: a
+/// colon followed by lowercase is a legitimate clause boundary and must stay
+/// one. Offset 0 counts as a boundary when it lies inside the window. `None`
+/// means the window was exhausted without a boundary. The caller fires by
+/// default.
 fn clause_start(text: &str, comma: usize, window: usize) -> Option<usize> {
     let lo = crate::widen_to_char_boundaries(text, comma.saturating_sub(window)..comma).start;
     let region = &text[lo..comma];
@@ -354,8 +347,8 @@ fn suppressed(clause: &str, openers: &[String], second_person: &[String]) -> boo
     if second_person.iter().any(|t| contains_word(&lower, t)) {
         return true;
     }
-    // 3. A deny-list verb immediately after an interior `, ` or after
-    //    `then ` — the leading-adverbial directive
+    // 3. A deny-list verb directly after an interior `, ` or after
+    //    `then `, the leading-adverbial directive
     //    ("When in doubt, use the builder, not the raw constructor.").
     let mut at = 0usize;
     while let Some(pos) = lower[at..].find(", ") {
@@ -420,7 +413,7 @@ fn apophatic_tail(
             continue;
         };
         // Clause recovery within the bounded window. A recovered clause goes
-        // through the suppression classifier; an exhausted window fires by
+        // through the suppression classifier. An exhausted window fires by
         // default (spec section 3: fail toward the candidate report).
         if let Some(cs) = clause_start(text, comma, window) {
             if suppressed(&text[cs..comma], &openers, &second_person) {
@@ -451,7 +444,7 @@ fn apophatic_tail(
 // ---------------------------------------------------------------------------
 
 /// The one tool-noun set, declared on SLOP-C011 and read from there by every
-/// rule that needs it. Two copies of a closed set drift; one does not.
+/// rule that needs it. Two copies of a closed set drift. One does not.
 pub(crate) fn shared_tool_nouns(cp: &CompiledPolicy) -> Vec<String> {
     match super::rule_idx(cp, "SLOP-C011") {
         Some(idx) => param_words(&cp.pkg.rules[idx], "tool_nouns"),
@@ -541,8 +534,8 @@ fn segment_at_coordinators(text: &str, clause: &Range<usize>) -> Vec<Range<usize
     out
 }
 
-/// Policy phrases split into words. Matching runs word by word rather than
-/// over raw bytes, so a phrase broken across a wrapped line still matches.
+/// Policy phrases split into words. Matching compares whole words, so a
+/// phrase broken across a wrapped line still matches.
 pub(crate) fn phrase_words(list: &[String]) -> Vec<Vec<String>> {
     list.iter()
         .map(|p| p.split_whitespace().map(|w| w.to_string()).collect())
@@ -558,12 +551,11 @@ pub(crate) fn phrase_at(toks: &[(usize, &str)], i: usize, phrase: &[String]) -> 
         .all(|(k, w)| toks.get(i + k).is_some_and(|t| &bare(t.1) == w))
 }
 
-/// How many tokens a `*` may stand for. Three covers the noun phrases a writer
-/// puts under a quantifier, up to a stacked determiner ("no one single
-/// finding"). Three is also where it stops, and the reason is correctness
-/// rather than appetite: a fourth token admits an of-phrase, so "no finding in
-/// the report is evidence" would seat the head noun on report and the
-/// closed-set subject test would run against the wrong word.
+/// How many tokens a `*` may stand for. Three covers the noun phrases a
+/// writer puts under a quantifier, up to a stacked determiner ("no one single
+/// finding"). The limit is three because a fourth token admits an of-phrase,
+/// so "no finding in the report is evidence" would seat the head noun on
+/// report and the closed-set subject test would run against the wrong word.
 const WILDCARD_MAX_TOKENS: usize = 3;
 
 /// Match `phrase` at `i`, where a `*` stands for one or two tokens. Returns
@@ -634,8 +626,8 @@ impl DenialTerms {
     }
 }
 
-/// The token index a clause's tests start from: past a leading coordinator,
-/// which belongs to the join and not to the clause.
+/// The token index after any leading coordinator. Clause tests start here so
+/// the coordinator stays with the join.
 fn clause_head(toks: &[(usize, &str)]) -> usize {
     usize::from(
         toks.first()
@@ -868,7 +860,8 @@ struct ClauseFacts {
     pronoun_subject: bool,
     /// The things the clause names: tool-noun lemmas with singular and plural
     /// folded to one, plus any product name. Two clauses corefer on a shared
-    /// entry, never on two different nouns that both happen to be tool nouns.
+    /// entry. Two different tool nouns never satisfy coreference merely by
+    /// sharing that classification.
     referents: Vec<String>,
 }
 
@@ -1068,9 +1061,9 @@ fn capability_denial(
         }
         // One finding per qualifying clause. Each is a separate edit with its
         // own judge question, so a stack of three reaches the writer as three
-        // spans rather than one span covering the sentence. The message names
-        // the arm that fired, and an Arm A message carries the count, since
-        // what makes a stack a stack is how many denials share the block.
+        // spans, one for each qualifying segment. The message names the arm
+        // that fired, and an Arm A message carries the count, since what
+        // makes a stack a stack is how many denials share the block.
         let detail = match qualifying.len() {
             1 => "arm B, one denial beside an affirmative partner".to_string(),
             n => format!("arm A, {n} denials in this block"),

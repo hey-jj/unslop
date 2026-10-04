@@ -1,6 +1,6 @@
-//! Section 12.5 and 12.8: property tests and determinism. `analyze` never
-//! panics on arbitrary bytes, output is byte-identical across runs, offsets
-//! stay in bounds on char boundaries.
+//! Section 12.5 and 12.8: property tests and determinism. Analysis handles
+//! arbitrary bytes without panicking. Output stays byte-identical across
+//! runs. Offsets stay in bounds on character boundaries.
 
 mod common;
 

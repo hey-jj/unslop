@@ -3,11 +3,11 @@
 //! beside two counterfactual extensions so a calibration decision has numbers.
 //!
 //! This is the instrument that produced `SOURCE_GUARD_MIN_LINES = 8` and
-//! `SOURCE_GUARD_MIN_PCT = 35` in `src/input.rs`, and the measurements written
-//! up in BUILD-LOG.md under the guard ruling and its extension. It reuses the
-//! shipped line test per line rather than restating it, so its counts cannot
-//! drift from the guard they calibrated. Rerun it against any set of paths
-//! before changing either constant:
+//! `SOURCE_GUARD_MIN_PCT = 35` in `src/input.rs`, and the measurements
+//! written up in BUILD-LOG.md under the guard ruling and its extension. It
+//! calls the shipped line test for each line, so its counts cannot drift from
+//! the guard they calibrated. Rerun it against any set of paths before
+//! changing either constant:
 //!
 //! ```text
 //! cargo run --example score -- src/*.rs README.md

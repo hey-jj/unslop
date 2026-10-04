@@ -25,7 +25,7 @@ fn readme_self_lint_is_violation_free() {
         "README carries violations: {violations:?}"
     );
     // The standing fixture fence quotes provider tokens and ornamental
-    // words; none may fire from quoted-in-code content.
+    // words. None may fire from quoted-in-code content.
     assert!(
         !report
             .findings

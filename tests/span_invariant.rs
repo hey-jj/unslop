@@ -44,11 +44,11 @@ fn span_invariant_over_inputs() {
     }
 }
 
-/// A rule that speaks about the document rather than about a place in it
-/// still reports a span, and that span is the first character of the payload.
-/// One byte was the old anchor, which lands mid-character on any payload
-/// opening outside ASCII and failed the whole run closed with exit 30. The
-/// three openings here are the ones a writer actually types.
+/// A rule about the whole document still reports a span, and that span is the
+/// first character of the payload. One byte was the old anchor, which lands
+/// mid-character on any payload opening outside ASCII and failed the whole
+/// run closed with exit 30. The three openings here are the ones a writer
+/// actually types.
 #[test]
 fn a_whole_document_span_opens_on_a_whole_character() {
     for (label, text) in [

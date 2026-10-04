@@ -16,8 +16,8 @@ fn run_stdin(args: &[&str], stdin: &[u8]) -> (i32, String, String) {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-    // A child asserting a usage error may exit before draining stdin; the
-    // resulting EPIPE on this write is expected, not a harness failure.
+    // A child checking a usage error can exit before draining stdin. Ignore
+    // EPIPE from that early exit.
     let _ = child.stdin.as_mut().unwrap().write_all(stdin);
     let out = child.wait_with_output().unwrap();
     (
@@ -143,8 +143,8 @@ fn verify_mismatch_exits_10() {
     let dir = std::env::temp_dir().join("unslop-cli-test");
     std::fs::create_dir_all(&dir).unwrap();
     let approval_path = dir.join("approval.json");
-    // A clean document. verify re-runs the linter, so the approved bytes must
-    // actually pass, not merely match the recorded hash.
+    // Verification re-runs the linter, so the approved bytes must pass its
+    // analysis as well as the hash check.
     let clean = b"Reads a file and returns its bytes.";
     let approval = serde_json::json!({
         "document_sha256": unslop::input::sha256_hex(clean),

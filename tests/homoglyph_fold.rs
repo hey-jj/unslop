@@ -4,7 +4,7 @@
 //! Without the fold, `dеlve` with a Cyrillic е (U+0435) exited CLEAN while
 //! the ASCII spelling fired SLOP-A001. A reader sees pixel-identical slop
 //! and the report is empty. The norm view folds
-//! cross-script Latin homoglyphs to Latin INSIDE MIXED-SCRIPT TOKENS ONLY,
+//! cross-script Latin homoglyphs to Latin inside MIXED-SCRIPT TOKENS only,
 //! and SLOP-H003 surfaces the mixed-script token itself as a hint
 //! (implementing its previously declared-but-dead unusual_scripts param).
 
@@ -77,7 +77,8 @@ fn pure_cyrillic_text_is_never_folded() {
 
 #[test]
 fn accented_latin_is_not_a_confusable() {
-    // é is Latin script — not a cross-script homoglyph. No fold, no hint.
+    // é belongs to Latin script. The cross-script homoglyph set excludes it.
+    // It produces no fold and no hint.
     let text = format!("{f}\n\nMeet at the café tomorrow morning.\n", f = filler());
     let report = run(&text, Profile::Doc);
     for rule in ["SLOP-A001", "SLOP-H003"] {
@@ -136,7 +137,7 @@ fn dagger_footnote_definition_line_is_exempt_inline_still_fires() {
 }
 
 // Fold-then-match: the four classes a mixed-script-only (ASCII-letter
-// witness) guard leaves open, each a confirmed silent FN without the
+// witness) guard leaves open, each a recorded silent FN without the
 // fully-foldable path.
 
 fn state_of<'r>(report: &'r unslop::Report, id: &str) -> Option<&'r str> {
@@ -151,7 +152,7 @@ fn state_of<'r>(report: &'r unslop::Report, id: &str) -> Option<&'r str> {
 fn all_homoglyph_words_fire_at_candidate_tier() {
     // Whole words spelled from the fold's own table (no ASCII letter): the
     // fully-foldable path folds them and an exact lexicon hit fires at
-    // CANDIDATE tier — conservative for the rare genuine-foreign collision.
+    // CANDIDATE tier, conservative for the rare genuine-foreign collision.
     let cases = [
         ("моѕаіс", "The design is a моѕаіс of ideas.", "SLOP-A010"),
         ("ерітоме", "It is the ерітоме of care.", "SLOP-A010"),
@@ -193,9 +194,9 @@ fn nfkc_compatibility_spellings_fire_hard() {
 
 #[test]
 fn html_split_homoglyph_fuses_and_fires() {
-    // `d<b>е</b>lve` arrives as three HTML text pieces; the fold runs on the
-    // FUSED norm text, so it fires exactly like the ASCII baseline
-    // `de<b></b>lve` does — no split-token asymmetry.
+    // `d<b>е</b>lve` arrives as three HTML text pieces. The fold runs on the
+    // fused norm text, so it fires exactly like the ASCII baseline
+    // `de<b></b>lve` does, no split-token asymmetry.
     let text = format!(
         "{f}\n\n<div>Ordinary d<b>\u{0435}</b>lve detail.</div>\n",
         f = filler()
@@ -227,7 +228,7 @@ fn entity_decoded_homoglyph_folds_too() {
 #[test]
 fn fold_then_match_guardrails_hold() {
     // Genuine Russian (contains non-homoglyph letters), accented Latin,
-    // a fully-foldable token whose fold is NOT a lexicon word (токен →
+    // a fully-foldable token whose fold is not a lexicon word (токен →
     // "token"), and legitimate compatibility chars: none may fire.
     let cases = [
         "Это репозиторий с примерами кода и документацией для разработчиков.",

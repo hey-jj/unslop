@@ -505,7 +505,7 @@ fn the_ruled_family_one_negatives_stay_silent() {
 }
 
 /// The noun-object forms belong to family 2, which is where the ruling put
-/// them. They report through the hedge list rather than the capability test.
+/// them. The hedge list reports them.
 #[test]
 fn the_noun_object_forms_report_through_family_two() {
     let text = "It reads text. The rule makes no claim about the weather.\n";
@@ -810,7 +810,7 @@ fn a_product_name_and_a_tool_noun_are_two_referents() {
 }
 
 /// D3 scoping: the closed-set-subject requirement is family 2's alone.
-/// Spelling C has no subject by design and still completes Arm B.
+/// Spelling C has no subject and still completes Arm B.
 #[test]
 fn spelling_c_stays_subjectless_under_the_arm_b_subject_rule() {
     let text = "It reads text. Never scores voice.\n";

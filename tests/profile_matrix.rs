@@ -258,7 +258,7 @@ fn the_comment_profile_moves_twelve_rules() {
     assert_eq!(core.get("rule3").unwrap(), "apply");
     assert_eq!(core.get("rule4").unwrap(), "apply");
 
-    // The word cap is the comment key on X003, not the email one.
+    // X003 uses the comment profile's word cap for this input.
     let caps = rule("SLOP-X003")
         .params
         .as_table()

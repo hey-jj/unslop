@@ -109,7 +109,7 @@ fn owner_mandated_sets_are_marked() {
 /// against the code-side implemented list plus the explicit disclosures.
 /// Factored out so the synthetic-dead-param test can prove the gate fails.
 fn param_gate_violations(pkg: &policy::PolicyPackage) -> Vec<String> {
-    // (rule id, param key, file that must disclose it) — a declared param may
+    // (rule id, param key, file that must disclose it), a declared param may
     // alternatively be explicitly disclosed as unimplemented. Empty today:
     // the dead params were stripped instead.
     const DISCLOSED: &[(&str, &str, &str)] = &[];
@@ -152,7 +152,7 @@ fn param_gate_violations(pkg: &policy::PolicyPackage) -> Vec<String> {
 }
 
 // A declared-but-dead structural param is how the H003 unusual-scripts
-// silent false negative once shipped — the implemented-symbol check was
+// silent false negative once shipped, the implemented-symbol check was
 // rule-level only, so a param with no code behind it passed CI. Every
 // declared param needs an implementation mapping or an explicit disclosure.
 #[test]

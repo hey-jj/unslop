@@ -1,8 +1,8 @@
 # SLOP-V004 agent-loop vocabulary. Candidate tier. Text addressed to the
-# orchestrator, the operator, or the drafting loop rather than the reader.
-# The request-reference entries (as requested, per your request) live here
-# rather than in words/assistant-offers.txt so that one rule owns each
-# phrase and no phrase is reported twice.
+# orchestrator, the operator, or the drafting loop. They describe that
+# audience and exclude the reader from it. The request-reference entries (`as requested`,
+# `per your request`) live here and are excluded from words/assistant-offers.txt.
+# One rule owns each phrase, so no phrase is reported twice.
 this turn
 in this turn
 in a previous turn

@@ -89,7 +89,7 @@ pub const ENGINE_RULES: &[&str] = &[
     "SLOP-J001",
 ];
 
-/// Every `(rule id, param key)` the implementation actually reads — or whose
+/// Every `(rule id, param key)` the implementation actually reads, or whose
 /// behavior it implements with the policy value hardcoded (noted inline).
 /// The policy-CI param-coverage gate fails when policy.toml declares a param
 /// absent from this list and not explicitly disclosed: a declared-but-dead
@@ -183,7 +183,7 @@ pub fn implemented_param_keys() -> &'static [(&'static str, &'static str)] {
         ("SLOP-H002", "flag_excluded_pct"),
         ("SLOP-H003", "mixed_line_endings"),
         ("SLOP-H003", "bom_stripped"),
-        // Mixed-script token hint implemented in coverage::evaluate; the
+        // Mixed-script token hint implemented in coverage::evaluate. The
         // evasion itself is closed by the norm-view homoglyph fold (A001).
         ("SLOP-H003", "unusual_scripts_in_identifierlike_prose"),
     ]

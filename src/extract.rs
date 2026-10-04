@@ -9,16 +9,15 @@ use std::ops::Range;
 
 pub const F_QUOTED: u8 = 1;
 pub const F_HEADING: u8 = 2;
-/// A norm segment produced by the FULLY-FOLDABLE homoglyph path: the
-/// whole token was cross-script confusables with no Latin witness, folded to
-/// Latin for matching. The engine downgrades any match on such a segment to
-/// CANDIDATE — the conservative tier for the rare genuine-foreign-word that
-/// folds onto an English lexicon term.
+/// A norm segment from a token whose characters all fold from listed
+/// cross-script confusables to Latin. The token has no Latin witness. A
+/// genuine foreign word can fold onto a lexicon term, so the engine lowers
+/// findings on this segment to CANDIDATE tier.
 pub const F_FULL_FOLD: u8 = 64;
-/// Prose extracted from the visible text of a raw-HTML region. A browser
-/// applies HTML reference grammar to this text — unbounded digits, optional
-/// semicolon — so the numeric-reference anomaly scan holds it to the
-/// stricter fail-closed rule for this evasion class.
+/// Prose extracted from visible raw-HTML text. Browsers accept unbounded
+/// digit runs and optional semicolons in numeric references here. The anomaly
+/// scan applies the stricter fail-closed check to forms outside the
+/// CommonMark grammar.
 pub const F_HTML_TEXT: u8 = 32;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -76,15 +75,15 @@ pub enum NormOp {
         /// `all_quoted` breaks across the wrap.
         flags: u8,
     },
-    /// A word barrier for an excluded INLINE region whose rendered content
-    /// visibly interrupts the surrounding prose — inline code (a code span
-    /// renders at least one character; CommonMark cannot express an empty one)
-    /// and autolink URLs. The norm view interposes U+FFFD so flanking text can
-    /// never fuse into a word or phrase the reader does not see: `del` + code +
-    /// `ve` must not assemble "delve". U+FFFD rather than a space or newline
-    /// because a space would manufacture a two-word phrase (`game` + code +
-    /// `changer` must not assemble "game changer") and a newline would
-    /// manufacture a false block start mid-sentence.
+    /// A word barrier for an excluded inline region whose rendered content
+    /// visibly interrupts surrounding prose: inline code and autolink URLs. A
+    /// code span renders at least one character because CommonMark cannot
+    /// express an empty one. The norm view interposes U+FFFD so flanking text
+    /// never fuses into a word or phrase the reader does not see. `del` +
+    /// code + `ve` must not assemble `"delve"`. A space would manufacture a
+    /// two-word phrase: `game` + code + `changer` must not assemble `"game
+    /// changer"`. A newline would manufacture a false block start
+    /// mid-sentence.
     Barrier {
         range: Range<usize>,
         flags: u8,
@@ -151,17 +150,17 @@ pub struct Doc {
     /// An HTML comment opened with `<!--` that never closes before the block
     /// (and the document) ends. A structural anomaly, fed to SLOP-M005.
     pub html_unclosed_comment: Option<Range<usize>>,
-    /// A `<script>`/`<style>` opened with no matching close before the block
-    /// (and the document) ends. Its body runs to end-of-block/EOF and is
-    /// swallowed by every scanner — the same fail-open a closed body avoids —
-    /// so it is a structural anomaly fed to SLOP-M005, in parity with the
-    /// unclosed comment.
+    /// A `<script>` or `<style>` opened with no matching close before the
+    /// block and document end. Its body runs to end-of-block/EOF and every
+    /// scanner swallows it. This repeats the fail-open that a closed body
+    /// avoids. SLOP-M005 reports it as a structural anomaly, as it does for
+    /// an unclosed comment.
     pub html_unclosed_script: Option<Range<usize>>,
-    /// An enumerated HTML construct the hand-rolled tokenizer knowingly cannot
-    /// render-faithfully parse: `<![CDATA[` outside a comment, a `--!>` comment
-    /// terminator, a self-closing SKIP_BODY element (`<script/>` etc.), or a
-    /// `<template>`. Rather than silently scan or skip it, fail closed as a
-    /// structural anomaly (SLOP-M005) for adjudication. First occurrence wins.
+    /// An enumerated HTML construct the hand-rolled tokenizer knowingly
+    /// cannot render-faithfully parse: `<![CDATA[` outside a comment, a
+    /// `--!>` comment terminator, a self-closing SKIP_BODY element
+    /// (`<script/>` etc.), or a `<template>`. Fail closed as a structural
+    /// anomaly (SLOP-M005) for adjudication. First occurrence wins.
     pub html_unparseable: Option<Range<usize>>,
     /// A numeric character reference the norm view refuses to decode: an
     /// in-bounds `&#…;` targeting an invisible/control/format codepoint (the
@@ -171,7 +170,7 @@ pub struct Doc {
     /// semicolon). Fail closed as SLOP-M005. First occurrence wins.
     pub numeric_ref_anomaly: Option<Range<usize>>,
     pub html_bytes: usize,
-    /// Link destinations whose DECODED form differs from the raw source
+    /// Link destinations whose decoded form differs from the raw source
     /// bytes, as `(raw destination region, decoded text)`. Backslash
     /// escapes and character references are resolved by the markdown parser
     /// (inline links, reference definitions) or by a browser inside the href
@@ -254,12 +253,12 @@ fn build_markdown(src: &str) -> Doc {
     let mut pending_html: Option<Range<usize>> = None;
 
     for (event, range) in parser.into_offset_iter() {
-        // Any non-HTML event ends the current HTML block: flush the joined run.
-        // Exception: a ZERO-RANGE whitespace-only Text event is a pulldown
-        // quirk (it emits one between the wrapped lines of a tab-indented
-        // list-item HTML block) — it must NOT break the run, or a multi-line
-        // comment is split, hiding its content from Y001 and leaking the tail
-        // to a prose scan. The following gap then bridges normally.
+        // Any non-HTML event flushes the pending HTML block except a
+        // zero-length, whitespace-only Text event. Pulldown emits this event
+        // between wrapped lines in a tab-indented list item. Flushing there
+        // would split a multiline comment, hide content from Y001, and expose
+        // its tail to the prose scan. The following gap must bridge the
+        // event.
         let ignorable_ws = matches!(&event, Event::Text(t)
             if range.start == range.end && t.chars().all(char::is_whitespace));
         if !matches!(event, Event::Html(_) | Event::InlineHtml(_)) && !ignorable_ws {
@@ -284,12 +283,12 @@ fn build_markdown(src: &str) -> Doc {
                 }
                 match tag {
                     Tag::Table(_) => {
-                        // Leading table edge: prose immediately before a
+                        // Leading table edge: prose directly before a
                         // table renders in its own block, so it must not fuse
                         // into the first cell (a paragraph ending "--" plus a
                         // word cell assembled S001's signature shape across the
                         // table edge). Same U+FFFD mechanism as the cell-end
-                        // barrier below; the range covers the table's first
+                        // barrier below. The range covers the table's first
                         // source char (always a char boundary).
                         let bend = src[range.start..]
                             .chars()
@@ -309,15 +308,15 @@ fn build_markdown(src: &str) -> Doc {
                         code_depth += 1;
                         // The rendered block visibly interrupts the prose
                         // exactly as an inline code span does, so it gets
-                        // the same U+FFFD barrier. Exclusion alone left NO
+                        // the same U+FFFD barrier. Exclusion alone left no
                         // trace in the norm view: the prose before a fence
                         // spliced directly against the prose after it, and
-                        // a U001 run fused across DIFFERING fenced contents
+                        // a U001 run fused across differing fenced contents
                         // into a phantom duplicate. The barrier makes the
                         // gap a segment break for every rule. The range
                         // covers the block's first source char (always a
                         // char boundary) so the segment has real source
-                        // bytes for trigger-fidelity reconstruction — same
+                        // bytes for trigger-fidelity reconstruction, same
                         // mechanism as the table leading edge above.
                         let bend = src[range.start..]
                             .chars()
@@ -404,20 +403,19 @@ fn build_markdown(src: &str) -> Doc {
                                         kind: RegionKind::Autolink,
                                     });
                                     doc.link_url_regions.push(inner.clone());
-                                    // Autolink hrefs are matched RAW, never
-                                    // decoded. CommonMark does not resolve
+                                    // Autolink hrefs match their raw spelling.
+                                    // This scan excludes decoding. CommonMark does not resolve
                                     // character references inside an autolink
-                                    // URI — the renderer amp-escapes it, so
+                                    // URI, the renderer amp-escapes it, so
                                     // the browser href carries the literal
                                     // `&#95;` bytes and never a decoded
                                     // tracking token. Decoding here would
-                                    // manufacture a false positive; only
+                                    // manufacture a false positive. Only
                                     // inline links and refdefs, where the
-                                    // parser really decodes, get a
-                                    // link_url_decoded entry.
-                                    // The URL renders visibly between the
-                                    // flanking runs: same barrier as inline
-                                    // code.
+                                    // parser decodes, get a
+                                    // link_url_decoded entry. The URL renders
+                                    // visibly between the flanking runs: same
+                                    // barrier as inline code.
                                     let mut flags = 0u8;
                                     if quote_depth > 0 {
                                         flags |= F_QUOTED;
@@ -484,7 +482,7 @@ fn build_markdown(src: &str) -> Doc {
                                 doc.link_url_regions.push(url_range);
                             }
                         }
-                        // The image renders as a replaced object; its
+                        // The image renders as a replaced object. Its
                         // alt text is visible-fallback prose (still scanned)
                         // that must not fuse with the flanking runs. One
                         // barrier on each side: here at the leading `![`, the
@@ -555,7 +553,7 @@ fn build_markdown(src: &str) -> Doc {
                 TagEnd::Strong => {
                     if let Some(label_range) = pending_bold_label.take() {
                         // `**Label:** text` carries the colon inside the bold
-                        // span; `**Label**: text` carries it just after.
+                        // span. `**Label**: text` carries it just after.
                         if src[label_range.clone()]
                             .trim_end_matches(['*', '_'])
                             .trim_end()
@@ -575,13 +573,13 @@ fn build_markdown(src: &str) -> Doc {
                     // Table cells render in separate boxes, so a match must
                     // never fuse across the `|` cell delimiter. The Block
                     // newline between cells is not enough: patterns with
-                    // a `\s{1,N}` gap crossed it — S001's `^--\s{1,8}\S` and
+                    // a `\s{1,N}` gap crossed it, S001's `^--\s{1,8}\S` and
                     // M001's `\s--\s` fired on placeholder-dash cells by
-                    // pairing one cell's `--` with the NEXT cell's text. Same
+                    // pairing one cell's `--` with the next cell's text. Same
                     // U+FFFD barrier as inline code: not a word char, not
                     // whitespace, not a line break, so flanking cells neither
                     // fuse into a word nor bridge a whitespace gap. The barrier
-                    // sits at the cell END only — never at the cell start,
+                    // sits at the cell end only. It is excluded from the cell start,
                     // where it would break the block-start position of the
                     // cell's own text and hide a genuine in-cell signature
                     // line. The range covers the delimiter char after the cell
@@ -685,15 +683,14 @@ fn build_markdown(src: &str) -> Doc {
                     range: range.clone(),
                     kind: RegionKind::Html,
                 });
-                // A RENDER-AFFECTING void tag
-                // (`<br>`, `<img …>`, `<hr>`, …) puts a visible break or
-                // object between the flanking runs, so they must not fuse —
-                // `del<br>ve` is read as two fragments, never "delve".
-                // Everything else fuses render-faithfully: formatting tags
-                // (`del<b></b>ve` renders "delve" and must keep firing) and
-                // the NON-rendering void tags (`del<wbr>ve` also renders
-                // "delve"; barriering those would be an evasion channel —
-                // see BARRIER_VOID_ELEMENTS).
+                // A render-affecting void tag (`<br>`, `<img …>`, `<hr>`, …)
+                // puts a visible break or object between flanking runs, so
+                // they must not fuse. `del<br>ve` reads as two fragments and
+                // never as `"delve"`. Formatting tags fuse faithfully:
+                // `del<b></b>ve` renders `"delve"` and must keep firing.
+                // Non-rendering void tags also fuse: `del<wbr>ve` renders
+                // `"delve"`. Barriers at these tags would create an evasion
+                // channel. See `BARRIER_VOID_ELEMENTS`.
                 if matches!(&event, Event::InlineHtml(_)) {
                     let frag = &src[range.clone()];
                     if !frag.starts_with("</")
@@ -714,11 +711,11 @@ fn build_markdown(src: &str) -> Doc {
                 }
                 // Accumulate one logical HTML block. pulldown emits blockquoted
                 // and list-indented HTML line by line, each event's range
-                // EXCLUDING the `> `/indent prefix, so the lines of one block
+                // excluding the `> `/indent prefix, so the lines of one block
                 // arrive as consecutive Html events separated by a gap that is
-                // only a line break plus those markers. Bridge such a gap; a
+                // only a line break plus those markers. Bridge such a gap. A
                 // gap with any other content (or a blank line) is a genuinely
-                // separate block, so FLUSH the accumulated run before starting a
+                // separate block, so flush the accumulated run before starting a
                 // new one. Overwriting `pending_html` without flushing would
                 // silently lose the previous fragment.
                 match pending_html.take() {
@@ -755,10 +752,10 @@ fn build_markdown(src: &str) -> Doc {
                 doc.stats.task_bullets += 1;
             }
             Event::FootnoteReference(_) => {
-                // The marker is rendered ("del[^1]ve" reads as
-                // del¹ve), so flanking runs must not fuse — same barrier as
-                // inline code. A marker after a completed word ("delve[^1]")
-                // still fires: U+FFFD is non-xid, so the boundary holds.
+                // The marker is rendered (`"del[^1]ve"` reads as del¹ve), so
+                // flanking runs must not fuse, same barrier as inline code. A
+                // marker after a completed word (`"delve[^1]"`) still fires:
+                // U+FFFD is non-xid, so the boundary holds.
                 let mut flags = 0u8;
                 if quote_depth > 0 {
                     flags |= F_QUOTED;
@@ -789,8 +786,8 @@ fn build_markdown(src: &str) -> Doc {
         // the label as a URL fired P004 on label text over a clean
         // destination.
         let dest_range = refdef_dest_range(src, &span);
-        // The parser resolves escapes/references in the destination;
-        // scan the decoded form too when it differs from the raw bytes.
+        // The parser resolves escapes/references in the destination.
+        // Scan the decoded form too when it differs from the raw bytes.
         if !dest_range.is_empty() && src[dest_range.clone()] != dest && !dest.is_empty() {
             doc.link_url_decoded.push((dest_range.clone(), dest));
         }
@@ -808,31 +805,29 @@ fn build_markdown(src: &str) -> Doc {
     doc
 }
 
-/// The RENDER-AFFECTING void elements: each puts something the
-/// reader SEES between the flanking runs — `br`/`hr` a break, `img`/`embed` a
-/// replaced box, `input` a form control — so it is a word barrier:
-/// flanking prose must not fuse across it. Deliberately NOT the full HTML
-/// void set: the non-rendering void tags (`meta`, `link`, `base`, `area`,
-/// `col`, `param`, `source`, `track`, and especially `wbr`, which renders
-/// nothing at all) leave the flanking text VISUALLY FUSED — `del<wbr>ve`
-/// reads "delve" — so barriering them would hand an author a free
-/// hide-a-lexicon-word channel, the same evasion class the homoglyph fold
-/// closed. Those tags fuse, render-faithfully. Non-void formatting
-/// tags (`<b>`, `<span>`, …) also stay transparent: `del<b></b>ve` really
-/// renders "delve".
+/// Render-affecting void elements put something visible between flanking
+/// runs: `br` and `hr` create a break, `img` and `embed` create a replaced
+/// box, and `input` creates a form control. Each is a word barrier, so
+/// flanking prose must not fuse across it. The barrier set excludes
+/// non-rendering void tags: `meta`, `link`, `base`, `area`, `col`, `param`,
+/// `source`, `track`, and `wbr`. Those tags leave the text visually fused.
+/// `del<wbr>ve` reads `"delve"`, so a barrier there would create a
+/// lexicon-word evasion channel of the same class the homoglyph fold closed.
+/// Non-void formatting tags such as `<b>` and `<span>` also stay transparent:
+/// `del<b></b>ve` renders `"delve"`.
 const BARRIER_VOID_ELEMENTS: &[&str] = &["br", "embed", "hr", "img", "input"];
 
 /// Raw destination byte range inside an inline link/image span, relative to
 /// the span. Two steps:
 ///
 /// 1. Literal: the first occurrence of the PARSED destination after the real
-///    `](` delimiter — skipping any `](` whose `]` is backslash-escaped, so a
+///    `](` delimiter, skipping any `](` whose `]` is backslash-escaped, so a
 ///    label containing `\](` cannot claim the delimiter. (`rfind` over the
-///    whole span picked the TITLE occurrence when the title repeats the URL.)
+///    whole span picked the title occurrence when the title repeats the URL.)
 /// 2. Syntactic fallback: when the parsed destination has no literal
 ///    occurrence (its raw spelling carries backslash escapes or character
 ///    references the parser decoded), parse the destination grammar after the
-///    delimiter — `<…>`-wrapped or bare to whitespace/the closing paren at
+///    delimiter, `<…>`-wrapped or bare to whitespace/the closing paren at
 ///    balance 0. Without the fallback this case would skip the region
 ///    entirely, leaving `utm\_source` / `utm&#95;source` destinations
 ///    silently unscanned.
@@ -915,13 +910,12 @@ fn inline_dest_syntactic(bytes: &[u8], delim: usize) -> Option<Range<usize>> {
     (d < j).then_some(d..j)
 }
 
-/// Destination byte range within a reference-definition span: the
-/// grammar is `[label]: dest` with an optional title, and only the
-/// destination is URL text — treating the whole span as a URL region fired
-/// P004 on LABEL text over a clean destination. Any unexpected shape falls
-/// back to the whole span, the fail-safe behavior. All compared
-/// delimiters are ASCII, so byte stepping cannot leave a char boundary where
-/// a range endpoint is taken.
+/// The destination range inside a reference definition. Its grammar is
+/// `[label]: dest` with an optional title. Only the destination reaches URL
+/// rules. Scanning the whole definition caused P004 to match label text
+/// despite a clean destination. Unexpected grammar falls back to the whole
+/// span. The delimiters are ASCII, so stepping over them preserves character
+/// boundaries.
 fn refdef_dest_range(src: &str, span: &Range<usize>) -> Range<usize> {
     let slice = &src[span.clone()];
     let bytes = slice.as_bytes();
@@ -971,7 +965,7 @@ fn refdef_dest_range(src: &str, span: &Range<usize>) -> Range<usize> {
     span.start + d..span.start + j
 }
 
-/// Column width of a line prefix with tab stops every 4 columns; every other
+/// Column width of a line prefix with tab stops every 4 columns. Every other
 /// char (blockquote `>` markers included) advances one column.
 fn width_cols(prefix: &str) -> usize {
     prefix.chars().fold(
@@ -987,7 +981,7 @@ fn is_unclosed_fence(
     open_len: usize,
     open_col: usize,
 ) -> bool {
-    // A fence closed before EOF always has a closing line; only a block that
+    // A fence closed before EOF always has a closing line. Only a block that
     // runs to the end of input can be unclosed.
     if range.end < src.len().saturating_sub(1) {
         return false;
@@ -1006,17 +1000,17 @@ fn is_unclosed_fence(
     }
     // CommonMark: the closing fence must use the same fence character, be a
     // line of only that character (optionally followed by whitespace), and
-    // run at least as long as the opening fence. A shorter run — e.g. ``` for
-    // a ````-opened block — does NOT close it, so the block runs to EOF and is
+    // run at least as long as the opening fence. A shorter run, e.g. ``` for
+    // a ````-opened block, does not close it, so the block runs to EOF and is
     // unclosed. A block whose non-fence tail is the last line lands here with
     // run == 0. This check must re-derive the opening length: otherwise a
     // 3-backtick line at EOF swallows a 4-backtick-opened block (run 3 >= 3),
     // hiding the slop tail as code. `ch`
     // is ASCII (backtick or tilde), so the run char count is a byte offset.
     // CommonMark allows a closing fence 0–3 columns of indentation RELATIVE
-    // to its container. Measure the closing line's prefix in COLUMNS — a tab
+    // to its container. Measure the closing line's prefix in COLUMNS, a tab
     // advances to the next multiple of 4, quote markers count like any other
-    // prefix char — then subtract the OPENING fence's column, which carries
+    // prefix char, then subtract the OPENING fence's column, which carries
     // the same container prefix shape. Stripping tabs and `>` before
     // counting would read `\t```` at EOF as 0 columns and false-close the
     // block (a fail-open), while a valid list-nested `  \t~~~` would
@@ -1031,13 +1025,13 @@ fn is_unclosed_fence(
 }
 
 /// True when the gap between two consecutive block-HTML events is only
-/// blockquote (`>`) markers and list/indent whitespace — the shape pulldown
+/// blockquote (`>`) markers and list/indent whitespace, the shape pulldown
 /// leaves between the per-line events of one wrapped HTML block, whose ranges
 /// exclude the `> `/indent prefix. The line break belongs to the preceding
-/// fragment, so a legitimate continuation gap carries NO newline (verified:
-/// blockquote gap `"> "`, list gap `"  "`). Any line break here would be a
-/// blank-line block boundary — which in practice arrives with an intervening
-/// (non-HTML) event that already flushed the run — so it is not bridged.
+/// fragment, so a legitimate continuation gap carries no newline (blockquote
+/// gap `"> "`, list gap `"  "`). Any line break here would be a blank-line
+/// block boundary, which in practice arrives with an intervening (non-HTML)
+/// event that already flushed the run, so it is not bridged.
 fn is_wrapped_html_gap(src: &str, gap: Range<usize>) -> bool {
     if gap.start >= gap.end {
         return false;
@@ -1055,7 +1049,7 @@ fn collect_html_payload(src: &str, range: &Range<usize>, doc: &mut Doc) {
             // An unclosed comment hides everything to end-of-block/EOF from
             // every scanner, which is strictly less protection than a closed
             // comment. Treat it as a structural anomaly (SLOP-M005) so the
-            // malformed tail fails closed rather than silently vanishing.
+            // malformed tail fails closed.
             if doc.html_unclosed_comment.is_none() {
                 doc.html_unclosed_comment = Some(range.start + cstart..range.end);
             }
@@ -1072,10 +1066,10 @@ fn collect_html_payload(src: &str, range: &Range<usize>, doc: &mut Doc) {
         at = content_end + 3;
     }
     // Reader-visible text in a block-HTML region is prose the rendered page
-    // shows but the markdown norm-view scan never saw. Extract it in SOURCE
+    // shows but the markdown norm-view scan never saw. Extract it in source
     // coordinates and feed it into the norm view as prose so the ordinary AC +
     // regex prose passes cover it. Inline markup is
-    // transparent — a word split across inline tags (`de<b></b>lve`) fuses —
+    // transparent, a word split across inline tags (`de<b></b>lve`) fuses,
     // while element-boundary whitespace renders as a space (`game <i>changer`
     // → `game changer`) and separate block elements get a hard boundary so
     // their text never fuses across a block edge.
@@ -1084,7 +1078,7 @@ fn collect_html_payload(src: &str, range: &Range<usize>, doc: &mut Doc) {
     // in the segmentation map, so such a finding can point into a region the
     // report calls excluded. Carving each run out of the html region would keep
     // the segmentation invariant (excluded + prose == total) only with careful
-    // splitting and would shift coverage numbers; left as-is for v1.
+    // splitting and would shift coverage numbers. Left as-is for v1.
     let mut anomaly = None;
     let pieces = html_visible_pieces(slice, range.start, &mut anomaly);
     if doc.html_unparseable.is_none() {
@@ -1096,7 +1090,7 @@ fn collect_html_payload(src: &str, range: &Range<usize>, doc: &mut Doc) {
             match piece {
                 HtmlPiece::Text(r) => {
                     // This visible run is now scanned as prose, so its
-                    // bytes are NOT raw markup: subtract them from html_bytes so
+                    // bytes are not raw markup: subtract them from html_bytes so
                     // the SLOP-M005 raw-HTML-dominance test counts only genuine
                     // markup. Without this an idiomatic README (centered header +
                     // badges + table + <details>) tripped the 20% threshold.
@@ -1109,7 +1103,7 @@ fn collect_html_payload(src: &str, range: &Range<usize>, doc: &mut Doc) {
                 // A rendered inter-word space, mapped from the collapsed source
                 // whitespace run so a multi-word slop term still matches. This
                 // whitespace sits inside visible prose, so it is not raw markup
-                // either — subtract it too (a text-heavy cell is ~15% spaces).
+                // either, subtract it too (a text-heavy cell is ~15% spaces).
                 HtmlPiece::Space(r) => {
                     doc.html_bytes = doc.html_bytes.saturating_sub(r.len());
                     doc.ops.push(NormOp::TextOwned {
@@ -1122,14 +1116,14 @@ fn collect_html_payload(src: &str, range: &Range<usize>, doc: &mut Doc) {
             }
         }
     }
-    // Script/style bodies are dropped by the render (SLOP-Y001). Extract EVERY
+    // Script/style bodies are dropped by the render (SLOP-Y001). Extract every
     // body (not just the first) with a quote-aware tag end, and treat a body
     // that never closes before end-of-block/EOF as a structural anomaly
     // (SLOP-M005), in parity with the unclosed comment.
     collect_script_style_bodies(slice, range.start, doc);
 }
 
-/// A visible-text piece of an HTML block in SOURCE coordinates.
+/// A visible-text piece of an HTML block in source coordinates.
 enum HtmlPiece {
     /// A maximal run of visible non-whitespace text.
     Text(Range<usize>),
@@ -1144,7 +1138,7 @@ enum HtmlPiece {
 /// visible-text boundary. Everything not listed here is treated as a
 /// block-level boundary so text on either side never fuses into a spurious
 /// multi-word match. `pre`/`code`/`kbd`/`samp`/`script`/`style` are handled
-/// separately (their bodies are skipped, not rendered as prose).
+/// separately (their bodies are skipped).
 const INLINE_ELEMENTS: &[&str] = &[
     "a", "abbr", "b", "bdi", "bdo", "cite", "data", "dfn", "em", "i", "mark", "q", "rp", "rt",
     "ruby", "s", "small", "span", "strong", "sub", "sup", "time", "u", "var", "wbr", "big", "tt",
@@ -1186,7 +1180,7 @@ fn tag_end(slice: &str, lt: usize) -> Option<usize> {
 /// The lowercased ASCII element name of a tag slice like `<div …>` or `</div>`.
 /// A `-` is part of the name (custom elements like `<code-sample>`): stopping at
 /// the hyphen would misread `<code-sample>` as `<code>` and skip its body as
-/// code. Chrome parses it as an ordinary unknown element whose text IS
+/// code. Chrome parses it as an ordinary unknown element whose text is
 /// visible, which this matches.
 fn tag_name(tag: &str) -> String {
     tag.trim_start_matches('<')
@@ -1198,12 +1192,11 @@ fn tag_name(tag: &str) -> String {
 }
 
 /// Whether a complete tag slice (`<name …>`) uses self-closing syntax. A `/`
-/// counts only when it immediately precedes the `>` AND is not the tail of an
-/// unquoted attribute value: in `<script data-x=/ >` and `<a href=foo/>` the
-/// `/` belongs to a VALUE, not the tag syntax. The token
-/// holding the `/` must carry no `=` — a bare tag name (`<script/>`), a bare
-/// attribute name (`<input disabled/>`), or nothing after a closing quote
-/// (`<img src="x"/>`).
+/// counts only when it directly precedes `>` and lies outside an unquoted
+/// attribute value. In `<script data-x=/ >` and `<a href=foo/>`, the `/`
+/// belongs to the value. Its token must carry no `=`: a bare tag name
+/// (`<script/>`), a bare attribute name (`<input disabled/>`), or nothing
+/// after a closing quote (`<img src="x"/>`).
 fn tag_is_self_closing(tag: &str) -> bool {
     let Some(head) = tag.strip_suffix("/>") else {
         return false;
@@ -1216,7 +1209,7 @@ fn tag_is_self_closing(tag: &str) -> bool {
 }
 
 /// Earliest offset in `hay` of a `</name` close tag whose name ends at a real
-/// boundary (`>`, `/`, whitespace, or end of input), ASCII case-insensitive —
+/// boundary (`>`, `/`, whitespace, or end of input), ASCII case-insensitive,
 /// `</prefix>` must not close `<pre>`.
 fn find_close_tag(hay: &str, name: &str) -> Option<usize> {
     find_tag_ci(hay, &format!("</{name}"))
@@ -1246,14 +1239,13 @@ fn starts_with_ci(s: &str, prefix: &[u8]) -> bool {
     s.len() >= prefix.len() && s.as_bytes()[..prefix.len()].eq_ignore_ascii_case(prefix)
 }
 
-/// The hidden-content anomaly triggers, scanned FLAT over the content of a
-/// skipped code-bearing body: a construct that hides content from a
-/// reader must fail closed even when nested where the prose scan never looks
-/// (`<code><template>…</template></code>`). Flat substring scans — not a
-/// recursive tokenize — so a crafted deep nesting cannot grow the stack; a
-/// code body that legitimately QUOTES one of these constructs anomaly-flags,
-/// which is the accepted fail-closed cost. Returns the source range of the
-/// earliest trigger.
+/// Scan hidden-content anomaly triggers flat across a skipped code-bearing
+/// body. A construct that hides content must fail closed even inside a body
+/// the prose scan skips (`<code><template>…</template></code>`). Flat
+/// substring scans keep crafted deep nesting from growing the stack. A code
+/// body that legitimately quotes one of these constructs also reports an
+/// anomaly under this fail-closed rule. Return the earliest trigger's source
+/// range.
 fn skipped_body_anomaly(body: &str, base: usize) -> Option<Range<usize>> {
     let mut first: Option<usize> = None;
     let mut consider = |p: Option<usize>| {
@@ -1280,20 +1272,19 @@ fn skipped_body_anomaly(body: &str, base: usize) -> Option<Range<usize>> {
     first.map(|p| base + p..base + body.len())
 }
 
-/// HTML5 tag-start rule: a `<` begins a tag only when immediately followed by
+/// HTML5 tag-start rule: a `<` begins a tag only when directly followed by
 /// an ASCII letter, `/`, `!`, or `?`. Any other `<` (e.g. `< delve`, `<3`) is
 /// literal text.
 fn is_tag_start(bytes: &[u8], i: usize) -> bool {
     matches!(bytes.get(i + 1), Some(&c) if c.is_ascii_alphabetic() || c == b'/' || c == b'!' || c == b'?')
 }
 
-/// Extract the visible-text pieces of an HTML slice in SOURCE coordinates
-/// (`base` is the slice's source start). Comments, tag markup, and
-/// code-bearing element bodies are removed; inline markup is transparent and
-/// block-element edges become hard boundaries. Never lowercases the slice —
-/// `to_lowercase` can change byte length and these offsets are source
-/// coordinates, so tag names are compared case-insensitively on the original
-/// bytes.
+/// Extract visible-text pieces of an HTML slice in source coordinates. `base`
+/// is the slice's source start. Remove comments, tag markup, and code-bearing
+/// element bodies. Inline markup stays transparent and block-element edges
+/// create hard boundaries. Never lowercase the slice: `to_lowercase` can
+/// change byte length and these offsets are source coordinates. Compare tag
+/// names case-insensitively against the source bytes.
 fn html_visible_pieces(
     slice: &str,
     base: usize,
@@ -1306,7 +1297,7 @@ fn html_visible_pieces(
     // The collapsed source range of whitespace pending before the next text.
     let mut pending_ws: Option<Range<usize>> = None;
     // Whether any text has been emitted in the current block (a Space is only
-    // emitted between two texts within a block, never at a block edge).
+    // emitted between two texts within a block). Block edges exclude it.
     let mut text_in_block = false;
     let mut i = 0usize;
 
@@ -1336,7 +1327,7 @@ fn html_visible_pieces(
             continue;
         }
         if starts_with_ci(&slice[i..], b"<![CDATA[") {
-            // CDATA outside a comment — matched case-insensitively, since a
+            // CDATA outside a comment, matched case-insensitively, since a
             // browser recovers `<![cdata[` into the same swallowed-markup
             // shape: the tokenizer swallows its content as tag
             // markup (unscanned), so a slop term inside vanishes silently. Fail
@@ -1356,9 +1347,9 @@ fn html_visible_pieces(
             let is_end = tag.starts_with("</");
             let self_closing = tag_is_self_closing(tag);
             if !is_end && name == "template" {
-                // <template> content is inert (never rendered): the tokenizer
-                // cannot decide whether it is prose. Fail closed and
-                // skip the body so it is not scanned as prose either way.
+                // Template content never renders. The tokenizer cannot decide
+                // whether it is prose. Fail closed and skip the body so the
+                // prose scan excludes it.
                 if anomaly.is_none() {
                     *anomaly = Some(base + i..base + n);
                 }
@@ -1374,15 +1365,16 @@ fn html_visible_pieces(
                 continue;
             }
             if !is_end && self_closing && SKIP_BODY_ELEMENTS.contains(&name.as_str()) {
-                // `<script/>` etc.: self-closing syntax on a raw-text element is
-                // a parse error browsers recover from unpredictably. Fail closed
-                // rather than guess whether the body is scanned.
+                // `<script/>` etc.: self-closing syntax on a raw-text element
+                // is a parse error browsers recover from unpredictably. Fail
+                // closed because the tokenizer cannot determine whether the
+                // body is visible.
                 if anomaly.is_none() {
                     *anomaly = Some(base + i..base + n);
                 }
             }
             if !is_end && !self_closing && SKIP_BODY_ELEMENTS.contains(&name.as_str()) {
-                // Skip the code-bearing body to its matching close tag; if it
+                // Skip the code-bearing body to its matching close tag. If it
                 // never closes, nothing after it is visible.
                 let body_end = match find_close_tag(&slice[te..], &name) {
                     Some(c) => te + c,
@@ -1486,7 +1478,7 @@ fn collect_script_style_bodies(slice: &str, base: usize, doc: &mut Doc) {
             break;
         };
         // Boundary-checked close: `</scriptx>` does not end a
-        // script body — matching HTML's raw-text end-tag rule.
+        // script body, matching HTML's raw-text end-tag rule.
         match find_close_tag(&slice[te..], name) {
             Some(c) => {
                 let body = te..te + c;
@@ -1521,14 +1513,15 @@ fn find_ci_ascii(hay: &str, needle: &[u8]) -> Option<usize> {
 }
 
 /// Byte length of the list, quote, or heading marker opening `line`, counting
-/// the whitespace on either side of it, or zero when the line opens on content.
-/// Markdown mode has a parser that strips these and text mode has none, so a
-/// marker-led line used to carry its marker into the prose range and every rule
-/// anchored to a block start read the position after the marker rather than the
-/// position a reader sees. A marker with no space after it is ordinary text, so
-/// a horizontal rule, a negative number, and a hashtag all score zero here.
-/// The bullet glyphs come from `views::BULLET_MARKERS`, the fleet-wide set
-/// this shares with the block-start decoration table.
+/// the whitespace on either side of it, or zero when the line opens on
+/// content. Markdown mode has a parser that strips these and text mode has
+/// none, so a marker-led line used to carry its marker into the prose range
+/// and every rule anchored to a block start read the position after the
+/// marker. The reader sees the content after all markers. A marker with no
+/// space after it is ordinary text, so a horizontal rule, a negative number,
+/// and a hashtag all score zero here. The bullet glyphs come from
+/// `views::BULLET_MARKERS`, the fleet-wide set this shares with the
+/// block-start decoration table.
 fn marker_run_len(line: &str) -> usize {
     let lead = line.len() - line.trim_start().len();
     let rest = &line[lead..];
@@ -1570,9 +1563,9 @@ fn build_text(src: &str) -> Doc {
             continue;
         }
         doc.ops.push(NormOp::Block);
-        // The marker is structure, not prose. Opening the range past it puts
-        // the block start where the reader sees it, and leaves the marker
-        // bytes to be reported as excluded structure like any other.
+        // The marker belongs to document structure. Opening the range past it
+        // puts the block start where the reader sees it, and leaves the
+        // marker bytes to be reported as excluded structure like any other.
         doc.ops.push(NormOp::Text {
             range: lr.start + marker_run_len(line)..lr.end,
             flags: 0,
@@ -1598,10 +1591,10 @@ fn build_text(src: &str) -> Doc {
     doc
 }
 
-/// Byte length of a `&#`-digit run a BROWSER would parse as a numeric
-/// character reference — any digit count, `;` optional (HTML terminates a
+/// Byte length of a `&#`-digit run a browser would parse as a numeric
+/// character reference, any digit count, `;` optional (HTML terminates a
 /// missing-semicolon reference at the first non-digit). Used only to
-/// RECOGNIZE valid-HTML-but-undecodable refs in HTML-derived text; decoding
+/// recognize valid-HTML-but-undecodable refs in HTML-derived text. Decoding
 /// stays bounded by the CommonMark grammar in `views::classify_numeric_ref`.
 fn html_numeric_ref_len(s: &str, amp: usize) -> Option<usize> {
     let body = s[amp..].strip_prefix("&#")?;
@@ -1626,14 +1619,13 @@ fn html_numeric_ref_len(s: &str, amp: usize) -> Option<usize> {
     Some(prefix + run + usize::from(semi))
 }
 
-/// Classify every numeric character reference in
-/// prose exactly as `views::push_text` will, and record the fail-closed
-/// cases as a structural anomaly. `Suppress` (a ref targeting an invisible/
-/// control/format codepoint) anomalies anywhere — no legitimate document
-/// writes `&#8203;`. `Overlong` and semicolonless digit refs anomaly only in
-/// HTML-derived text, where a browser decodes what the CommonMark grammar
-/// leaves literal; in markdown prose the reader sees them literally, so
-/// nothing hides.
+/// Classify every numeric character reference in prose exactly as
+/// `views::push_text` does. Record fail-closed cases as structural anomalies.
+/// `Suppress` targets an invisible, control, or format codepoint and reports
+/// anywhere. Legitimate documents never write `&#8203;`. `Overlong` and
+/// semicolonless digit references report anomalies only in HTML-derived text,
+/// where browsers decode forms outside CommonMark grammar. In markdown prose
+/// readers see those forms literally, so nothing hides.
 fn scan_numeric_ref_anomalies(src: &str, doc: &mut Doc) {
     let mut anomaly: Option<Range<usize>> = None;
     'ops: for op in &doc.ops {

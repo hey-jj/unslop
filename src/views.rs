@@ -10,9 +10,9 @@ use unicode_normalization::{is_nfc_quick, IsNormalized, UnicodeNormalization};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SegKind {
-    /// Norm bytes equal source bytes; offsets map linearly.
+    /// Norm bytes equal source bytes. Offsets map linearly.
     Identity,
-    /// Norm bytes differ from source bytes; a match touching any part of
+    /// Norm bytes differ from source bytes. A match touching any part of
     /// this segment maps to the whole source range.
     Mapped,
 }
@@ -81,23 +81,22 @@ const ENTITIES: &[(&str, &str)] = &[
 ///
 /// This list and `DECORATION_RANGES` are the two sets F-R14a and F-R14e make
 /// fleet-wide, and all three repositories carry the same members. They sit
-/// together here so a future harvest edits both rather than one.
+/// together here so future updates cover both sets.
 ///
-/// U+2022 is the one with a measured population, at 5 occurrences and none
-/// line-leading in a 738k-line repository corpus, and 39 occurrences with 2
-/// line-leading in a 504k-line prose corpus. The other three are here for
-/// completeness by analogy rather than measured need: their combined
-/// line-leading count across both corpora is zero. U+00B7 stays out. It is a
-/// letter in Catalan and a separator inside running prose, it appeared 232
-/// times across the same corpora with none line-leading, and a rendered list
-/// does not paste as one.
+/// Only U+2022 has a measured population: 5 occurrences with zero at line
+/// starts in a 738k-line repository corpus, and 39 with 2 at line starts in a
+/// 504k-line prose corpus. The other three markers follow by analogy. Their
+/// combined count at line starts in both corpora is zero. U+00B7 is excluded
+/// because it is a Catalan letter and a prose separator. Its 232 occurrences
+/// in those corpora included none at line starts. Rendered lists do not paste
+/// it as a bullet.
 pub(crate) const BULLET_MARKERS: &[char] = &['\u{2022}', '\u{2023}', '\u{2043}', '\u{2219}'];
 
 /// Codepoint ranges the block-start walk reads past when they stand in front
-/// of a word. See `BULLET_MARKERS` for the fleet-source note that covers both
-/// sets. The ranges are spelled out rather than taken from a general-category
-/// table, because the crate carries no such table and a bounded list is
-/// auditable against the corpus probes that measured the change.
+/// of a word. See `BULLET_MARKERS` for the fleet-source note covering both
+/// sets. The ranges are explicit because the crate carries no
+/// general-category table. A bounded list is auditable against the corpus
+/// probes that measured the change.
 const DECORATION_RANGES: &[(u32, u32)] = &[
     (0x200D, 0x200D), // zero width joiner
     (0x20E3, 0x20E3), // combining enclosing keycap
@@ -120,15 +119,14 @@ const DECORATION_RANGES: &[(u32, u32)] = &[
 ];
 
 /// Unicode `Default_Ignorable_Code_Point` (DerivedCoreProperties): every
-/// codepoint a conformant renderer shows as NOTHING when unsupported — soft
-/// hyphen, CGJ, bidi marks/embeddings/isolates, Mongolian and Khmer inherent
-/// controls, Hangul fillers, variation selectors, word joiners, BOM,
-/// interlinear annotation, shorthand/musical formats, and the plane-14 tag
-/// block. The literal-path removal keys on this FULL set, not the
-/// 5-char zero-width list, so no invisible character — literal or decoded —
-/// can sit inside a lexicon word and hide it (`del\u{00AD}ve` normalizes to
-/// "delve" and matches directly). Removal is render-faithful: a reader never
-/// sees these.
+/// codepoint a conformant renderer hides when unsupported. The set includes
+/// soft hyphen, CGJ, bidi marks, embeddings and isolates, Mongolian and Khmer
+/// inherent controls, Hangul fillers, variation selectors, word joiners, BOM,
+/// interlinear annotation, shorthand and musical formats, and the plane-14
+/// tag block. Literal removal uses this full set beyond the 5-character
+/// zero-width list. No invisible character, literal or decoded, can hide a
+/// lexicon word. `del\u{00AD}ve` normalizes to `"delve"` and matches directly.
+/// Removal follows rendering because a reader never sees these characters.
 const DEFAULT_IGNORABLE_RANGES: &[(u32, u32)] = &[
     (0x00AD, 0x00AD),
     (0x034F, 0x034F),
@@ -156,13 +154,13 @@ fn is_default_ignorable(ch: char) -> bool {
         .any(|&(lo, hi)| lo <= c && c <= hi)
 }
 
-/// Cross-script Latin homoglyphs: the realistic Cyrillic and Greek letters
-/// that render identically (or near-identically) to Latin ones — the
-/// homoglyph-evasion alphabet, deliberately NOT the full Unicode confusables
-/// data file. Folded to Latin in the norm view ONLY inside a mixed-script
-/// token: `dеlve` with a Cyrillic е normalizes to "delve" and the
-/// lexicon fires directly, while a pure-Cyrillic or pure-Greek word —
-/// genuine Russian or Greek text — is never touched.
+/// Cross-script Latin homoglyphs: realistic Cyrillic and Greek letters that
+/// render identically or near-identically to Latin letters. The table covers
+/// this evasion alphabet and excludes the full Unicode confusables data file.
+/// The mixed-script path folds them to Latin only inside mixed-script tokens.
+/// `dеlve` with Cyrillic е normalizes to `"delve"` and matches the lexicon
+/// directly. Genuine pure-Cyrillic and pure-Greek words stay unchanged on
+/// this path.
 const CONFUSABLE_TO_LATIN: &[(char, &str)] = &[
     // Cyrillic lowercase.
     ('а', "a"),
@@ -231,14 +229,14 @@ pub(crate) fn confusable_latin(ch: char) -> Option<&'static str> {
 
 /// Per-char fold-then-match decisions for ONE alphanumeric token:
 ///
-/// 1. NFKC identifier normalization: any ALPHABETIC char whose NFKC form
-///    differs folds to that form unconditionally — fullwidth Latin and the
+/// 1. NFKC identifier normalization: any alphabetic char whose NFKC form
+///    differs folds to that form unconditionally, fullwidth Latin and the
 ///    mathematical alphanumerics collapse to plain ASCII (UAX #31/TR39
 ///    identifier security). Non-alphabetic compatibility chars (½, ², …) are
-///    deliberately untouched.
+///    untouched.
 /// 2. Cross-script confusables fold when the token is MIXED-SCRIPT (carries
-///    a post-NFKC ASCII letter) — the hard path — OR when the token is FULLY
-///    FOLDABLE (every non-ASCII char either NFKC-folds to ASCII or is a
+///    a post-NFKC ASCII letter), the hard path, OR when the token is fully
+///    foldable (every non-ASCII char either NFKC-folds to ASCII or is a
 ///    table entry). The fully-foldable path is flagged: the engine downgrades
 ///    any match inside it to CANDIDATE, the conservative tier for the rare
 ///    genuine-foreign-word collision. Genuine Russian/Greek words contain
@@ -344,12 +342,12 @@ fn fold_tokens_str(s: &str) -> String {
     out
 }
 
-/// Fold pass over a BUILT norm view: applies `fold_replacements` to the
-/// fused norm text — so a token split across inline markup, HTML pieces, or
-/// entity decodes is judged whole — rebuilding the segment table so every
-/// span still maps to its exact source bytes. Fully-foldable replacements
-/// carry `F_FULL_FOLD` on their segments; the engine downgrades matches
-/// inside them to candidate tier.
+/// Fold pass over a built norm view: applies `fold_replacements` to the fused
+/// norm text, so a token split across inline markup, HTML pieces, or entity
+/// decodes is judged whole, rebuilding the segment table so every span still
+/// maps to its exact source bytes. Fully-foldable replacements carry
+/// `F_FULL_FOLD` on their segments. The engine downgrades matches inside them
+/// to candidate tier.
 pub(crate) fn fold_norm(old: NormView) -> NormView {
     let repls = fold_replacements(&old.text);
     if repls.is_empty() {
@@ -362,7 +360,7 @@ pub(crate) fn fold_norm(old: NormView) -> NormView {
         block_starts: Vec::with_capacity(old.block_starts.len()),
         zero_width_removed: old.zero_width_removed.clone(),
     };
-    // Old-norm-offset -> new-norm-offset checkpoints at segment starts;
+    // Old-norm-offset -> new-norm-offset checkpoints at segment starts.
     // line starts always fall on op boundaries, which are segment
     // boundaries (or end of text).
     let mut checkpoints: Vec<(usize, usize)> = Vec::new();
@@ -478,11 +476,11 @@ pub(crate) fn entity_at(s: &str, at: usize) -> Option<(usize, &'static str)> {
         .map(|(e, r)| (e.len(), *r))
 }
 
-/// Unicode `Cf` (format) ranges. A numeric reference to any of these is an
-/// evasion signature (zero-width joiners, bidi controls, tags), never
-/// legitimate typography — the enumeration is checked by classification, so
-/// slight drift against a future Unicode version stays fail-closed only for
-/// refs, never for literal text.
+/// Unicode `Cf` format ranges. Numeric references to these zero-width
+/// joiners, bidi controls, and tags signal evasion and never represent
+/// legitimate typography. Classification checks this enumeration. Slight
+/// drift against a future Unicode version stays fail-closed for references
+/// only. Literal text never fails closed through this check.
 const FORMAT_RANGES: &[(u32, u32)] = &[
     (0x00AD, 0x00AD),
     (0x0600, 0x0605),
@@ -512,11 +510,11 @@ fn is_format_char(ch: char) -> bool {
     FORMAT_RANGES.iter().any(|&(lo, hi)| lo <= c && c <= hi)
 }
 
-/// Unicode `Zs` space separators (NBSP, ogham space, en/em/thin spaces, …).
-/// A reference to one renders as a visible space in both grammars, so it
-/// folds to a plain space exactly as the entity table folds `&nbsp;` /
-/// `&emsp;` / `&ensp;` / `&thinsp;` — layout, not evasion, and
-/// `game&#xA0;changer` still reaches the two-word patterns.
+/// Unicode `Zs` space separators: NBSP, ogham space, en/em/thin spaces, and
+/// the remaining members. References render as visible spaces in both
+/// grammars and fold to plain spaces exactly as `&nbsp;`, `&emsp;`, `&ensp;`,
+/// and `&thinsp;` do. They carry layout. `game&#xA0;changer` still reaches
+/// two-word patterns.
 fn is_space_separator(ch: char) -> bool {
     matches!(
         ch as u32,
@@ -524,15 +522,14 @@ fn is_space_separator(ch: char) -> bool {
     )
 }
 
-/// What a numeric character reference may decode INTO: not a C0/C1 control
-/// (`char::is_control`), not a zero-width/format character, not a
-/// default-ignorable (a ref to CGJ or a variation selector must
-/// anomaly-flag, not decode into a char the literal path would then remove),
-/// not whitespace other than a plain space (space separators were folded
-/// before this check, so what reaches it is tab/LF/CR/FF — controls — and
-/// the Zl/Zp line/paragraph separators). No legitimate document writes
-/// `&#8203;` or `&#1;`; a reference to an invisible codepoint IS the
-/// evasion signature.
+/// A numeric reference may decode to an ordinary printable character or a
+/// plain space. Reject C0/C1 controls (`char::is_control`), zero-width and
+/// format characters, default-ignorables, and whitespace beyond plain space.
+/// A CGJ or variation-selector reference must report an anomaly before
+/// literal removal can hide it. Space separators fold before this check.
+/// Remaining whitespace comprises tab/LF/CR/FF controls and Zl/Zp
+/// line/paragraph separators. Legitimate documents never write `&#8203;` or
+/// `&#1;`. An invisible-codepoint reference signals evasion.
 fn is_ordinary_printable(ch: char) -> bool {
     ch == ' '
         || (!ch.is_control()
@@ -541,27 +538,27 @@ fn is_ordinary_printable(ch: char) -> bool {
             && !is_default_ignorable(ch))
 }
 
-/// Classification of a numeric character reference `&#DDD;` / `&#xHH;` at
-/// `amp`. Decoding is pure arithmetic — no HTML5 named table — and bounded by
-/// the CommonMark reference grammar (at most 7 decimal / 6 hex digits, `;`
-/// required), so the decoder recognizes exactly what the markdown renderer
-/// recognizes and can never fabricate a word the reader does not see
-/// (over-decoding manufactures false positives).
+/// Classify a numeric character reference `&#DDD;` or `&#xHH;` at `amp`.
+/// Decoding uses pure arithmetic without an HTML5 named table. CommonMark
+/// bounds it to at most 7 decimal or 6 hex digits and requires `;`. The
+/// decoder recognizes exactly what the markdown renderer recognizes and never
+/// fabricates a word the reader cannot see. Over-decoding manufactures false
+/// positives.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NumRef {
     /// In-bounds reference to an ordinary printable codepoint: decode it.
     /// A non-scalar value (surrogate, > U+10FFFF) decodes to U+FFFD exactly
     /// as CommonMark renders it.
     Decode(usize, char),
-    /// In-bounds reference to a control/format/invisible codepoint — the
+    /// In-bounds reference to a control/format/invisible codepoint, the
     /// evasion signature. The norm view elides it to
-    /// U+FFFD; `extract` records the fail-closed SLOP-M005 anomaly.
+    /// U+FFFD. `extract` records the fail-closed SLOP-M005 anomaly.
     Suppress(usize),
     /// Valid digits terminated by `;` but outside the CommonMark bounds
     /// (overlong leading zeros). The renderer leaves it literal, so nothing
-    /// can hide behind it in markdown; the norm view elides it to U+FFFD so
+    /// can hide behind it in markdown. The norm view elides it to U+FFFD so
     /// its `;` never reads as prose punctuation, and
-    /// HTML-derived text records the anomaly (a browser WOULD decode it).
+    /// HTML-derived text records the anomaly (a browser would decode it).
     Overlong(usize),
     /// Not a numeric character reference.
     Literal,
@@ -589,7 +586,7 @@ pub(crate) fn classify_numeric_ref(s: &str, amp: usize) -> NumRef {
     if run > cap {
         return NumRef::Overlong(len);
     }
-    // Bounded digits always fit u32; from_u32 rejects surrogates and
+    // Bounded digits always fit u32. From_u32 rejects surrogates and
     // > U+10FFFF, which CommonMark renders as the replacement character.
     let ch = char::from_u32(u32::from_str_radix(&digits[..run], radix).unwrap_or(u32::MAX))
         .unwrap_or('\u{FFFD}');
@@ -680,7 +677,7 @@ impl<'a> Builder<'a> {
                         // Fail closed: never inject the target codepoint
                         // (Suppress) or the raw `&#…;` bytes, whose `;` would
                         // read as prose punctuation. U+FFFD
-                        // marks the spot without fabricating or fusing words;
+                        // marks the spot without fabricating or fusing words.
                         // `extract`'s scan records the SLOP-M005 anomaly.
                         self.push_identity(base + run_start..base + i, flags);
                         self.push_mapped(base + i..base + i + len, "\u{FFFD}", flags);
@@ -719,9 +716,9 @@ impl<'a> Builder<'a> {
                 continue;
             }
             // Maximal run of non-ASCII chars needing no removal. Homoglyph
-            // and NFKC folding happen in `fold_norm` AFTER the whole view is
-            // built, so a token split across inline markup or HTML
-            // pieces is judged FUSED, not per-op-slice.
+            // and NFKC folding happen in `fold_norm` after the whole view is
+            // built, so a token split across inline markup or HTML pieces is
+            // judged as one fused token.
             let na_start = i;
             let mut j = i;
             while j < slice.len() && bytes[j] >= 0x80 {
@@ -749,7 +746,7 @@ impl<'a> Builder<'a> {
 /// Re-render an isolated fragment to a comparable text key: decode the
 /// enumerated entities, resolve backslash escapes, drop zero-width characters,
 /// strip HTML comments and real tags, NFC-normalize, fold whitespace runs to a
-/// single space, and ASCII case-fold. Applied to BOTH the matched trigger (norm
+/// single space, and ASCII case-fold. Applied to both the matched trigger (norm
 /// text, where every transform is idempotent) and a finding's reported source
 /// slice, it lets the trigger-fidelity invariant confirm the slice still
 /// renders to the trigger without false-tripping on entities, escapes,
@@ -825,8 +822,8 @@ pub fn render_key(s: &str) -> String {
     out
 }
 
-/// Remove HTML comments and real start/end tags (`<` immediately followed by an
-/// ASCII letter, `/`, `!`, or `?` — the HTML5 tag-start rule). A `<` that is
+/// Remove HTML comments and real start/end tags (`<` directly followed by an
+/// ASCII letter, `/`, `!`, or `?`, the HTML5 tag-start rule). A `<` that is
 /// literal text (e.g. `a < b`) is preserved, so prose angle brackets are not
 /// eaten. Delimiters are ASCII, so byte indexing stays on char boundaries.
 fn strip_html(s: &str) -> String {
@@ -900,9 +897,8 @@ pub fn build_norm(src: &str, doc: &Doc) -> NormView {
             }
             // An excluded inline region (inline code, autolink) whose
             // rendered content visibly interrupts the prose. U+FFFD is not a
-            // word character, not whitespace, and not a line break, so
-            // flanking runs neither fuse into a word nor assemble a phrase
-            // nor gain a block start.
+            // word character or whitespace, so flanking runs neither fuse
+            // into a word nor assemble a phrase nor gain a block start.
             NormOp::Barrier { range, flags } => {
                 b.push_mapped(range.clone(), "\u{FFFD}", *flags);
             }
@@ -913,7 +909,7 @@ pub fn build_norm(src: &str, doc: &Doc) -> NormView {
 
 impl NormView {
     /// Map a norm byte range to a source byte range. Identity segments map
-    /// linearly; mapped segments expand to their whole source range.
+    /// linearly. Mapped segments expand to their whole source range.
     pub fn to_source(&self, norm_range: Range<usize>) -> Option<Range<usize>> {
         if norm_range.start >= norm_range.end || self.segs.is_empty() {
             return None;
@@ -936,13 +932,13 @@ impl NormView {
         Some(start..end)
     }
 
-    /// Concatenate the norm text of every segment intersecting a SOURCE range.
+    /// Concatenate the norm text of every segment intersecting a source range.
     /// Excluded bytes (code fences, inline code, HTML markup, link URLs,
     /// autolinks) carry no segment and so contribute nothing, which is exactly
     /// how the norm view renders them. This reconstructs the norm text a source
     /// span carries, letting the trigger-fidelity check confirm a reported
     /// span still renders to its trigger even when `to_source` legitimately
-    /// widened it across excluded bytes — without re-implementing the pipeline.
+    /// widened it across excluded bytes, without re-implementing the pipeline.
     pub fn source_span_norm_text(&self, src: &Range<usize>) -> String {
         let mut out = String::new();
         // Segments are emitted in source order, so src.start and src.end are
@@ -959,7 +955,7 @@ impl NormView {
                 continue;
             }
             match seg.kind {
-                // Identity: norm bytes equal source bytes, so borrow ONLY the
+                // Identity: norm bytes equal source bytes, so borrow only the
                 // sub-slice the source span actually overlaps. Appending the
                 // whole segment let a span that touched one byte of a
                 // trigger-bearing paragraph inherit the entire paragraph's
@@ -973,7 +969,7 @@ impl NormView {
                     out.push_str(&self.text[noff..nend]);
                 }
                 // Mapped: norm and source differ in length and a match
-                // touching any part maps to the whole source range by design
+                // touching any part maps to the whole source range
                 // (entities, escapes, softbreaks, owned content), so it
                 // legitimately contributes its whole norm text.
                 SegKind::Mapped => out.push_str(&self.text[seg.norm.clone()]),
@@ -1015,7 +1011,7 @@ impl NormView {
     }
 
     fn seg_at(&self, norm_offset: usize) -> Option<usize> {
-        // Binary search over non-empty norm ranges; empty segments (removals)
+        // Binary search over non-empty norm ranges. Empty segments (removals)
         // never contain an offset.
         let mut lo = 0usize;
         let mut hi = self.segs.len();
@@ -1067,25 +1063,21 @@ impl NormView {
 
 /// What a block marker may put in front of the first word without moving it.
 /// The semantics block reads the block-start position after markers are
-/// stripped, and an emoji a writer types at the head of a line is a marker in
-/// every sense that matters: it decorates the opening rather than continuing a
-/// sentence. Whitespace, the symbol and pictograph ranges, and the joiners
-/// that hold an emoji sequence together all belong to that run. The ranges are
-/// spelled out rather than taken from a general-category table, because the
-/// crate carries no such table and a bounded list is auditable against the
-/// corpus probe that measured this change. Letters, digits, and the
-/// punctuation that ends or continues a sentence are deliberately absent: a
-/// comma or a dash before a word means the word is mid-sentence, which is the
-/// distinction the whole test exists to draw.
+/// stripped. An emoji at the head of a line decorates the opening.
+/// Whitespace, symbol and pictograph ranges, and the joiners that hold an
+/// emoji sequence together all belong to that run. The ranges are explicit
+/// because the crate carries no general-category table. A bounded list is
+/// auditable against the corpus probe that measured this change. The list
+/// excludes letters, digits, and punctuation that ends or continues a
+/// sentence. A comma or dash before a word means the word is mid-sentence.
+/// The test distinguishes that position from a block start.
 ///
 /// The bullet glyphs come from `BULLET_MARKERS` and everything else from
-/// `DECORATION_RANGES`. Reading the bullets from the marker list rather than
-/// folding them into a range is what keeps the two sets honest: the geometric
-/// shapes a renderer reaches for at a nested level were already read past
-/// because they sit inside a range carried whole, while the plain bullet sits
-/// in a different Unicode block and was not. Nothing intended that split, and
-/// a pasted list should not depend on which block Unicode filed its marker
-/// under.
+/// `DECORATION_RANGES`. Reading bullets from the marker list keeps both sets
+/// consistent. Geometric shapes used at nested list levels were already read
+/// past because they sit inside a range carried whole. The plain bullet sits
+/// in a different Unicode block and was excluded. That split was accidental.
+/// Pasted lists must handle markers consistently across Unicode blocks.
 fn is_leading_decoration(c: char) -> bool {
     if c.is_whitespace() || BULLET_MARKERS.contains(&c) {
         return true;
@@ -1107,9 +1099,8 @@ mod tests {
         build_norm(src, &doc)
     }
 
-    // Numeric character references are
-    // CLASSIFIED — ordinary printables decode, invisibles suppress, overlong
-    // forms elide, everything else stays literal.
+    // Numeric references decode printable characters, suppress invisibles,
+    // elide overlong forms, and preserve the remaining literal spellings.
     #[test]
     fn numeric_ref_classification_is_arithmetic_and_fail_closed() {
         use NumRef::*;
@@ -1121,7 +1112,7 @@ mod tests {
         // Ordinary typography decodes (guardrail: © and é are not anomalies).
         assert_eq!(classify_numeric_ref("&#169;", 0), Decode(6, '\u{A9}'));
         assert_eq!(classify_numeric_ref("&#233;", 0), Decode(6, '\u{E9}'));
-        // Space separators fold to a plain space like &nbsp;/&emsp; do.
+        // Space separators fold to a plain space like `&nbsp;/&emsp;` do.
         assert_eq!(classify_numeric_ref("&#xA0;", 0), Decode(6, ' '));
         assert_eq!(classify_numeric_ref("&#8195;", 0), Decode(7, ' ')); // emsp
 
@@ -1135,9 +1126,9 @@ mod tests {
         assert_eq!(classify_numeric_ref("&#xFEFF;", 0), Suppress(8));
         assert_eq!(classify_numeric_ref("&#x202E;", 0), Suppress(8)); // RLO
 
-        // Default-ignorables OUTSIDE Cf also suppress — a ref to
-        // CGJ (Mn) or a variation selector must not decode into a char the
-        // literal path would then silently remove.
+        // Default-ignorables outside Cf also suppress. CGJ has category Mn. A
+        // reference to CGJ or a variation selector must report an anomaly
+        // before literal removal can hide it.
         assert_eq!(classify_numeric_ref("&#847;", 0), Suppress(6)); // CGJ
         assert_eq!(classify_numeric_ref("&#xFE0F;", 0), Suppress(8)); // VS16
         assert_eq!(classify_numeric_ref("&#173;", 0), Suppress(6)); // SHY
@@ -1189,19 +1180,19 @@ mod tests {
             }],
         );
         assert_eq!(nv.text, "delve parser");
-        // A one-byte source span borrows ONLY that byte's norm text.
+        // A one-byte source span borrows only that byte's norm text.
         assert_eq!(nv.source_span_norm_text(&(6..7)), "p");
-        // So a span displaced onto "parser" cannot inherit the paragraph's
-        // "delve" (the pre-fix bug returned the whole segment text).
+        // So a span displaced onto `"parser"` cannot inherit the paragraph's
+        // `"delve"` (the pre-fix bug returned the whole segment text).
         assert!(!nv.source_span_norm_text(&(6..12)).contains("delve"));
     }
 
-    // The fold pass rewrites the segment table; a folded char must
+    // The fold pass rewrites the segment table. A folded char must
     // still map to its exact source bytes, and fully-folded tokens carry
     // the candidate flag.
     #[test]
     fn fold_pass_preserves_source_mapping_and_flags() {
-        // "dеlve": the Cyrillic е occupies source bytes 1..3.
+        // `"dеlve"`: the Cyrillic е occupies source bytes 1..3.
         let nv = norm(
             "d\u{0435}lve",
             vec![NormOp::Text {
@@ -1264,7 +1255,7 @@ mod tests {
         );
         assert_eq!(nv.text, "delve");
         assert_eq!(render_key("d\u{0435}lve"), "delve");
-        // A pure-Cyrillic word never folds (delve spelled fully Cyrillic).
+        // A pure-Cyrillic word never folds (`delve` spelled fully Cyrillic).
         let src = "делве";
         let nv = norm(
             src,
@@ -1288,7 +1279,7 @@ mod tests {
 
     #[test]
     fn source_span_norm_text_keeps_whole_mapped_segment() {
-        // "a&mdash;b" → Identity "a", Mapped(em-dash), Identity "b".
+        // `"a&mdash;b"` → Identity `"a"`, Mapped(em-dash), Identity `"b"`.
         let nv = norm(
             "a&mdash;b",
             vec![NormOp::Text {
@@ -1297,8 +1288,8 @@ mod tests {
             }],
         );
         assert_eq!(nv.text, "a\u{2014}b");
-        // A span touching one byte inside the &mdash; run still yields the whole
-        // mapped char — Mapped keeps whole-range semantics by design.
+        // A span touching one byte inside the `&mdash;` run still yields the
+        // whole mapped char, Mapped keeps whole-range semantics by design.
         assert!(nv.source_span_norm_text(&(3..4)).contains('\u{2014}'));
     }
 }

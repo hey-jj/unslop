@@ -12,10 +12,10 @@
 //!     genuinely separate HTML blocks still flush separately.
 //!   - the HTML visible-text tokenizer is quote-aware, applies the HTML5
 //!     `<`-is-text rule, preserves element-boundary spaces, inserts hard
-//!     boundaries between block elements, and skips pre/code/kbd/samp bodies;
-//!     every script/style body is inspected and an unclosed one fails closed.
+//!     boundaries between block elements, and skips pre/code/kbd/samp bodies.
+//!     Every script/style body is inspected and an unclosed one fails closed.
 //!   - a finding whose reported span does not render back to the matched
-//!     trigger becomes an instrumentation error, never a wrong finding.
+//!     trigger aborts the report with an instrumentation error.
 
 mod common;
 
@@ -35,7 +35,7 @@ fn short_fence_close_at_eof_fails_closed() {
     // The exact fail-open input: a 4-backtick fence, `code`, a 3-backtick
     // line, a slop line, then a 3-backtick line at EOF. Without the open-length
     // check the trailing 3-backtick line "closed" the 4-backtick block
-    // (run 3 >= 3) and the slop was swallowed as code — exit 0, no finding.
+    // (run 3 >= 3) and the slop was swallowed as code, exit 0, no finding.
     // `run >= open_len.max(3)` keeps the block unclosed and M005
     // fires.
     let text = "This report describes a build failure on the current release branch.\n\
@@ -111,7 +111,7 @@ fn blockquoted_div_visible_text_is_scanned_and_blocks() {
 
 #[test]
 fn list_indented_multiline_comment_bridges() {
-    // A list-indented comment's continuation gap is "  " (indent, no marker);
+    // A list-indented comment's continuation gap is "  " (indent, no marker).
     // it must bridge the same way so the comment reaches html_comments.
     let text = format!(
         "{f}\n\n- <!-- hidden note spanning\n  a second indented line -->\n- second item\n",
@@ -135,7 +135,7 @@ fn list_indented_multiline_comment_bridges() {
 fn separate_html_blocks_still_flush_separately() {
     // Two divs separated by a blank line are distinct blocks (an intervening
     // event flushes the first). Each is scanned in isolation, so slop in the
-    // SECOND still fires — proof the join did not drop the first fragment.
+    // second still fires, proof the join did not drop the first fragment.
     let text = format!(
         "{f}\n\n<div>ordinary first block</div>\n\n<div>we delve into it</div>\n",
         f = filler()
@@ -153,8 +153,9 @@ fn separate_html_blocks_still_flush_separately() {
 
 #[test]
 fn every_script_body_is_inspected() {
-    // Two <script> blocks in one HTML region: the OLD code found only the first.
-    // Both bodies are render-dropped text and must each reach Y001.
+    // Two script blocks share one HTML region. The previous scan found only
+    // the first. Both bodies are render-dropped text and must each reach
+    // Y001.
     let text = format!(
         "{f}\n\n<div>\n<script>var a = 1;</script>\n<p>text</p>\n<script>hidden second body here</script>\n</div>\n",
         f = filler()
@@ -179,7 +180,7 @@ fn every_script_body_is_inspected() {
 
 #[test]
 fn unclosed_script_fails_closed() {
-    // A <script> with no </script> runs to end-of-block/EOF and is swallowed by
+    // A script element without a closing tag runs to end-of-block/EOF and is swallowed by
     // every scanner. In parity with the unclosed comment it must fire M005.
     let text = format!(
         "{f}\n\n<script>\nthis body never closes and hides delve tapestry from every scan\n",
@@ -196,7 +197,8 @@ fn unclosed_script_fails_closed() {
 #[test]
 fn script_body_span_is_quote_aware() {
     // The mirror bug: a `>` inside a quoted attribute value must not end the
-    // start tag, so the reported body is the body — not attribute bytes.
+    // start tag. The reported range covers the hidden script body and
+    // excludes attribute bytes.
     let text = format!(
         "{f}\n\n<script title=\">x\">body content here</script>\n",
         f = filler()
@@ -236,7 +238,7 @@ fn quote_aware_tag_end_does_not_leak_attributes() {
 
 #[test]
 fn html5_stray_lt_is_visible_text() {
-    // `< delve` — a `<` not followed by a letter/`/`/`!`/`?` is literal text,
+    // `< delve`, a `<` not followed by a letter/`/`/`!`/`?` is literal text,
     // not a tag start, so the words after it render and must fire.
     let text = format!(
         "{f}\n\n<div>note: x < delve into the rich tapestry > done</div>\n",
@@ -262,8 +264,8 @@ fn html5_stray_lt_is_visible_text() {
 
 #[test]
 fn element_boundary_space_is_preserved() {
-    // `game <i>changer</i>` renders "game changer"; the element-boundary space
-    // must be kept so the multi-word cliché matches.
+    // `game <i>changer</i>` renders `"game changer"`. The element-boundary
+    // space must be kept so the multi-word cliché matches.
     let text = format!(
         "{f}\n\n<div>a real game <i>changer</i> today</div>\n",
         f = filler()
@@ -278,9 +280,9 @@ fn element_boundary_space_is_preserved() {
 
 #[test]
 fn nested_inline_stays_word_bounded() {
-    // `ordinary <span>delve</span> detail` must read "ordinary delve detail"
-    // (spaces kept), so `delve` fires word-bounded and does not fuse its
-    // neighbours into "ordinarydelvedetail".
+    // `ordinary <span>delve</span> detail` must read `"ordinary delve
+    // detail"` (spaces kept), so `delve` fires word-bounded and does not fuse
+    // its neighbours into `"ordinarydelvedetail"`.
     let text = format!(
         "{f}\n\n<div>ordinary <span>delve</span> detail</div>\n",
         f = filler()
@@ -297,8 +299,8 @@ fn nested_inline_stays_word_bounded() {
 
 #[test]
 fn block_boundary_does_not_fuse_across_elements() {
-    // `<div>game&nbsp;</div><div>changer</div>` must NOT produce a cross-block
-    // "game changer": the block boundary is a hard separator.
+    // `<div>game&nbsp;</div><div>changer</div>` must not produce a
+    // cross-block `"game changer"`: the block boundary is a hard separator.
     let text = format!(
         "{f}\n\n<div>game&nbsp;</div><div>changer</div>\n",
         f = filler()
@@ -334,10 +336,11 @@ fn pre_code_body_is_not_prose() {
 
 #[test]
 fn softbreak_crossing_finding_is_not_false_tripped() {
-    // A contrast cliché that spans a soft line break: the norm folds "\n" to a
+    // A contrast cliché spans a soft line break. The norm folds `"\n"` to a
     // space, so the source slice differs from the trigger. The fidelity check
-    // must accept it (fold + containment), not convert the finding to an
-    // instrumentation error; a false trip would fail `analyze` and panic `run`.
+    // must accept it through folding and containment. It must preserve the
+    // finding and never turn it into an instrumentation error. A false trip
+    // would fail `analyze` and panic `run`.
     let text = "This is not just a parser,\nbut a comprehensive framework for everything.\n";
     let report = run(text, Profile::Doc);
     assert!(
@@ -350,14 +353,14 @@ fn softbreak_crossing_finding_is_not_false_tripped() {
 
 #[test]
 fn inline_code_split_word_does_not_fire() {
-    // An INVERSION of an earlier premise, which asserted the OPPOSITE: that
-    // `de`x`lve` fuses to "delve" in the norm view, fires SLOP-A001, and
+    // An inversion of an earlier premise, which asserted the opposite: that
+    // `de`x`lve` fuses to `"delve"` in the norm view, fires SLOP-A001, and
     // survives fidelity via the norm-text reconstruction. That premise was a
-    // false positive — the rendered text is "de x lve" (the code content
-    // visibly interrupts the word), so no reader ever sees "delve". The
-    // barrier puts U+FFFD in the norm view at the inline-code gap; the word
-    // never assembles and nothing fires — and the fidelity check no longer
-    // has a fused span to certify.
+    // false positive, the rendered text is `"de x lve"` (the code content
+    // visibly interrupts the word), so no reader ever sees `"delve"`. The
+    // barrier puts U+FFFD in the norm view at the inline-code gap. The word
+    // never assembles and nothing fires, and the fidelity check no longer has
+    // a fused span to certify.
     let text = "Intro sentence for length and context here.\n\nWe de`x`lve into the topic.\n";
     let report = run(text, Profile::Doc);
     assert!(

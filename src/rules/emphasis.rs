@@ -1,6 +1,6 @@
-//! emphasis family structural rules: SLOP-E001 emphasis-staged contrast,
+//! Emphasis family structural rules: SLOP-E001 emphasis-staged contrast,
 //! SLOP-E003 bold-label lists, SLOP-E004 title-case headings, and SLOP-E005
-//! boldface density. The bold rules use parser emphasis events, never
+//! boldface density. The bold rules use parser emphasis events and exclude
 //! literal asterisks.
 
 use crate::engine::{CompiledPolicy, Hit};

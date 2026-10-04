@@ -20,8 +20,8 @@ fn run_stdin(args: &[&str], stdin: &[u8]) -> (i32, String, String) {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-    // A child asserting a usage error may exit before draining stdin; the
-    // resulting EPIPE on this write is expected, not a harness failure.
+    // A child checking a usage error can exit before draining stdin. Ignore
+    // EPIPE from that early exit.
     let _ = child.stdin.as_mut().unwrap().write_all(stdin);
     let out = child.wait_with_output().unwrap();
     (
@@ -31,12 +31,10 @@ fn run_stdin(args: &[&str], stdin: &[u8]) -> (i32, String, String) {
     )
 }
 
-// ---------------------------------------------------------------------------
-// Assembly cost: the per-hit norm-text lookup is a binary search and the
-// findings cap stops collection, so a 2 MiB input dense in segments and hits
-// completes in seconds, not O(hits x segments) minutes. The bound is generous
-// for debug builds and CI noise; the pre-fix behavior was minutes to hours.
-// ---------------------------------------------------------------------------
+// Assembly uses binary search for each hit's norm-text lookup and stops
+// collection at the findings cap. A 2 MiB input dense in segments and hits
+// completes in seconds. The prior O(hits x segments) scan took minutes to
+// hours. The time bound allows debug builds and CI noise.
 
 const PERF_BOUND: Duration = Duration::from_secs(30);
 
@@ -130,11 +128,9 @@ fn tokenless_confusable_run_two_mib_completes_fast() {
     assert_eq!(h003[0].spans[0].start, 1, "the first confusable char");
 }
 
-// ---------------------------------------------------------------------------
-// Closed stdout: every output path terminates quietly with its intended exit
-// code, never a panic backtrace. `>&-` makes each stdout write fail
-// deterministically; the pipe test exercises real EPIPE mid-report.
-// ---------------------------------------------------------------------------
+// Every output path terminates quietly with its intended exit code and never
+// causes a panic backtrace. `>&-` makes each stdout write fail
+// deterministically. The pipe test exercises real EPIPE mid-report.
 
 #[cfg(unix)]
 fn run_with_closed_stdout(args: &[&str], stdin: &[u8]) -> (i32, String) {

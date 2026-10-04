@@ -1,8 +1,7 @@
 //! Section 12.11: for each homograph the listed collocations pass, the bare
-//! prose use blocks, and a testing crate's readme using "test harness"
-//! passes end to end. delve and game-changer block unconditionally.
-//! `harness` is narrowed to the verb-with-object slop form —
-//! every noun use passes structurally, no exemption list needed.
+//! prose use blocks, and a testing crate's readme using "test harness" passes
+//! end to end. `delve` and `game-changer` block unconditionally. `harness` is narrowed to the verb-with-object slop
+//! form, every noun use passes structurally, no exemption list needed.
 
 mod common;
 

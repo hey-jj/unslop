@@ -1,5 +1,5 @@
 //! Section 12.13: rendered-view tests. HTML comment payloads and unused
-//! link definitions with prose fire SLOP-Y001; configured marker comments do
+//! link definitions with prose fire SLOP-Y001. Configured marker comments do
 //! not.
 
 mod common;

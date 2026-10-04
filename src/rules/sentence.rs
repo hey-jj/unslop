@@ -49,8 +49,8 @@ pub(crate) fn blocks(norm: &NormView) -> Vec<Range<usize>> {
     out
 }
 
-/// True when the `.` ending at `dot_end` closes a sentence rather than an
-/// abbreviation or a number. Mirrors the contrast module's bounded test: a
+/// True when the `.` ending at `dot_end` closes a sentence. Abbreviations and
+/// numbers are excluded. Mirrors the contrast module's bounded test: a
 /// following alphanumeric is internal, a lowercase continuation after a
 /// bounded space run is mid-sentence, everything else is terminal.
 fn period_is_terminal(text: &str, dot_end: usize) -> bool {
@@ -140,8 +140,7 @@ pub(crate) fn find_word(hay_lower: &str, needle: &str, from: usize) -> Option<us
 }
 
 /// Emit one hit, mapping the norm span onto the source the way the shared
-/// engine does. A span that does not map is dropped rather than reported at
-/// the wrong bytes.
+/// engine does. Drop a span that does not map. Wrong-byte spans never report.
 pub(crate) fn push_norm_hit(
     idx: usize,
     norm: &NormView,
@@ -315,7 +314,7 @@ fn colon_as_connector(
                 }
                 let abs = sentence.start + off;
                 let before = &text[sentence.start..abs];
-                // A letter immediately before, so a clock time, a ratio, and
+                // A letter directly before, so a clock time, a ratio, and
                 // a chapter reference never fire.
                 if !before
                     .chars()
@@ -339,7 +338,7 @@ fn colon_as_connector(
                     continue;
                 }
                 // An enumeration after the colon is the list case the rule
-                // exempts by design. More than one comma is a list, and so is
+                // exempts. More than one comma is a list, and so is
                 // a two-item join, which needs no comma at all.
                 let tail = &text[abs + 1..sentence.end];
                 let tail_lower = tail.to_ascii_lowercase();
@@ -445,7 +444,7 @@ fn false_range(
                 if is_quantity(first) || is_quantity(second) {
                     continue;
                 }
-                // Arm B: a category head immediately before `from`.
+                // Arm B: a category head directly before `from`.
                 let arm_b = before
                     .first()
                     .map(|t| heads.contains(&bare(t)))
@@ -512,7 +511,7 @@ fn agentive_passive(
                     continue;
                 };
                 let actor = bare(actor_raw);
-                // A by-phrase naming a time is a deadline, not an actor.
+                // The actor test excludes by-phrases that name a deadline.
                 if actor.is_empty()
                     || temporal.contains(&actor)
                     || actor.chars().next().is_some_and(|c| c.is_ascii_digit())
@@ -657,10 +656,10 @@ fn dense_sentence(
                 }
                 prev = c;
             }
-            // An enumeration is a list, not a stack of clauses. Two shapes
-            // say so: a run that closes with "and X" or "or X", and a comma
-            // rate no clause structure could produce, since a clause needs
-            // at least three words. Either one leaves only length.
+            // The clause-stack test excludes enumerations. Two shapes say so:
+            // a run that closes with "and X" or "or X", and a comma rate no
+            // clause structure could produce, since a clause needs at least
+            // three words. Either one leaves only length.
             let enumeration = body.contains(", and ")
                 || body.contains(", or ")
                 || (commas > 0 && words / commas < 3);

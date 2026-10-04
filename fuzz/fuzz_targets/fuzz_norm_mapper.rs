@@ -1,8 +1,8 @@
 #![no_main]
 //! The norm view mapping must round-trip: every norm range maps to a source
-//! range on char boundaries, in bounds, AND the mapped source slice must
+//! range on char boundaries, in bounds, and the mapped source slice must
 //! re-render (through the same view transforms) to still carry the norm text it
-//! came from — the trigger-fidelity property, folded and case-insensitive.
+//! came from, the trigger-fidelity property, folded and case-insensitive.
 
 use libfuzzer_sys::fuzz_target;
 
@@ -31,7 +31,7 @@ fuzz_target!(|text: &str| {
     // Folded round-trip / trigger fidelity: no real finding's reported span
     // may fail to render back to its trigger. `analyze` may fail for other
     // instrumentation reasons on adversarial input, but must never emit the
-    // trigger-fidelity error — that would mean a legitimate finding was turned
+    // trigger-fidelity error, that would mean a legitimate finding was turned
     // into an instrumentation error by an over-strict re-render check.
     for profile in [
         unslop::Profile::Doc,
