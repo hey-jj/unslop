@@ -4,8 +4,8 @@
 
 mod common;
 
-use unslop::Profile;
 use common::{assert_invariants, has_rule, run};
+use unslop::Profile;
 
 fn v007(report: &unslop::Report) -> Vec<String> {
     report
@@ -36,40 +36,112 @@ fn v007_dated_possessive_reports_once_with_the_date() {
 #[test]
 fn v007_every_spelling_fires_on_its_span() {
     for (text, span) in [
-        ("The owner ruled that the lexicon drops the bare word.\n", "The owner ruled that"),
-        ("The maintainer's call was to keep the gate.\n", "The maintainer's call"),
-        ("This entry was requested by the user.\n", "requested by the user"),
-        ("The owner-flagged stack ships as a rule.\n", "owner-flagged"),
-        ("Code sign-off is Fable, by owner decision.\n", "owner decision"),
+        (
+            "The owner ruled that the lexicon drops the bare word.\n",
+            "The owner ruled that",
+        ),
+        (
+            "The maintainer's call was to keep the gate.\n",
+            "The maintainer's call",
+        ),
+        (
+            "This entry was requested by the user.\n",
+            "requested by the user",
+        ),
+        (
+            "The owner-flagged stack ships as a rule.\n",
+            "owner-flagged",
+        ),
+        (
+            "Code sign-off is Fable, by owner decision.\n",
+            "owner decision",
+        ),
         ("Per the owner, the digest stays sealed.\n", "Per the owner"),
-        ("The flag was added at the user's request.\n", "at the user's request"),
-        ("On the principal's instruction the run stopped.\n", "On the principal's instruction"),
-        ("Owner decision (2026-08-20): keep the profile.\n", "Owner decision (2026-08-20)"),
+        (
+            "The flag was added at the user's request.\n",
+            "at the user's request",
+        ),
+        (
+            "On the principal's instruction the run stopped.\n",
+            "On the principal's instruction",
+        ),
+        (
+            "Owner decision (2026-08-20): keep the profile.\n",
+            "Owner decision (2026-08-20)",
+        ),
         ("- Ruling: keep the profile.\n", "Ruling:"),
         ("- **Ruling:** keep the profile.\n", "Ruling:"),
-        ("Decision, 2026-08-19: the profile stays.\n", "Decision, 2026-08-19:"),
-        ("Ruled by owner proxy, the rule is candidate tier.\n", "Ruled by owner proxy"),
-        ("The proxy signed off on 2026-08-20.\n", "The proxy signed off on 2026-08-20"),
-        ("The owner\u{2019}s verdict was to drop the entry.\n", "The owner\u{2019}s verdict"),
-        ("The reviewer approved it on 2026-08-20.\n", "The reviewer approved it on 2026-08-20"),
-        ("The owner ruled this out after the inspection.\n", "The owner ruled this"),
-        ("Approved by the maintainer's proxy.\n", "Approved by the maintainer's proxy"),
+        (
+            "Decision, 2026-08-19: the profile stays.\n",
+            "Decision, 2026-08-19:",
+        ),
+        (
+            "Ruled by owner proxy, the rule is candidate tier.\n",
+            "Ruled by owner proxy",
+        ),
+        (
+            "The proxy signed off on 2026-08-20.\n",
+            "The proxy signed off on 2026-08-20",
+        ),
+        (
+            "The owner\u{2019}s verdict was to drop the entry.\n",
+            "The owner\u{2019}s verdict",
+        ),
+        (
+            "The reviewer approved it on 2026-08-20.\n",
+            "The reviewer approved it on 2026-08-20",
+        ),
+        (
+            "The owner ruled this out after the inspection.\n",
+            "The owner ruled this",
+        ),
+        (
+            "Approved by the maintainer's proxy.\n",
+            "Approved by the maintainer's proxy",
+        ),
         ("The owner wants the profile kept.\n", "The owner wants"),
-        ("The orchestrator's call was to stop.\n", "The orchestrator's call"),
-        ("Owner directive (2026-08-24): stop the run.\n", "Owner directive (2026-08-24)"),
-        ("The maintainer asked for a smaller patch.\n", "The maintainer asked"),
+        (
+            "The orchestrator's call was to stop.\n",
+            "The orchestrator's call",
+        ),
+        (
+            "Owner directive (2026-08-24): stop the run.\n",
+            "Owner directive (2026-08-24)",
+        ),
+        (
+            "The maintainer asked for a smaller patch.\n",
+            "The maintainer asked",
+        ),
         ("Per your ruling, the digest stays.\n", "Per your ruling"),
         ("You ruled that the bare word leaves.\n", "You ruled"),
-        ("The owner's request was a shorter README.\n", "The owner's request"),
+        (
+            "The owner's request was a shorter README.\n",
+            "The owner's request",
+        ),
         ("The lead chose the second option.\n", "The lead chose"),
         ("Ruling (2026-08-20): keep.\n", "Ruling (2026-08-20):"),
-        ("Directive of 2026-08-24 stands.\n", "Directive of 2026-08-24"),
-        ("Ruled by a Fable agent in the owner's stead.\n", "the owner's stead"),
-        ("Drafted under owner-proxy Ruling 011.\n", "owner-proxy Ruling"),
-        ("The owner has ruled on everything current.\n", "The owner has ruled"),
+        (
+            "Directive of 2026-08-24 stands.\n",
+            "Directive of 2026-08-24",
+        ),
+        (
+            "Ruled by a Fable agent in the owner's stead.\n",
+            "the owner's stead",
+        ),
+        (
+            "Drafted under owner-proxy Ruling 011.\n",
+            "owner-proxy Ruling",
+        ),
+        (
+            "The owner has ruled on everything current.\n",
+            "The owner has ruled",
+        ),
         ("The owner greenlit the batch.\n", "The owner greenlit"),
         ("As you directed, the run stopped.\n", "As you directed"),
-        ("Owner correction 2026-08-22: the gate relaxes.\n", "Owner correction 2026-08-22"),
+        (
+            "Owner correction 2026-08-22: the gate relaxes.\n",
+            "Owner correction 2026-08-22",
+        ),
     ] {
         let report = run(text, Profile::Doc);
         assert_invariants(text, &report);

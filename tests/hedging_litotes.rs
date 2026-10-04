@@ -30,53 +30,158 @@ fn i008(report: &unslop::Report) -> Vec<String> {
 #[test]
 fn i007_every_member_fires_on_its_span() {
     for (text, span) in [
-        ("This is no small feat for a single maintainer.\n", "no small feat"),
-        ("Migrating the schema was no simple task.\n", "was no simple task"),
-        ("The rollout is not without its challenges.\n", "not without its challenges"),
-        ("Debugging the linker is far from trivial.\n", "far from trivial"),
-        ("It is hardly surprising that the build broke.\n", "hardly surprising"),
-        ("It's not exactly trivial to reproduce.\n", "not exactly trivial"),
-        ("The codebase isn't exactly simple.\n", "isn't exactly simple"),
-        ("The codebase isn\u{2019}t exactly simple.\n", "isn\u{2019}t exactly simple"),
+        (
+            "This is no small feat for a single maintainer.\n",
+            "no small feat",
+        ),
+        (
+            "Migrating the schema was no simple task.\n",
+            "was no simple task",
+        ),
+        (
+            "The rollout is not without its challenges.\n",
+            "not without its challenges",
+        ),
+        (
+            "Debugging the linker is far from trivial.\n",
+            "far from trivial",
+        ),
+        (
+            "It is hardly surprising that the build broke.\n",
+            "hardly surprising",
+        ),
+        (
+            "It's not exactly trivial to reproduce.\n",
+            "not exactly trivial",
+        ),
+        (
+            "The codebase isn't exactly simple.\n",
+            "isn't exactly simple",
+        ),
+        (
+            "The codebase isn\u{2019}t exactly simple.\n",
+            "isn\u{2019}t exactly simple",
+        ),
         ("Getting this to compile is no mean feat.\n", "no mean feat"),
-        ("The result leaves something to be desired.\n", "leaves something to be desired"),
-        ("It would not be wrong to say the design is fragile.\n", "It would not be wrong to say"),
+        (
+            "The result leaves something to be desired.\n",
+            "leaves something to be desired",
+        ),
+        (
+            "It would not be wrong to say the design is fragile.\n",
+            "It would not be wrong to say",
+        ),
         ("This is, to put it mildly, a mess.\n", "to put it mildly"),
-        ("The API surface is not inconsiderable.\n", "not inconsiderable"),
-        ("Setup is not for the faint of heart.\n", "not for the faint of heart"),
+        (
+            "The API surface is not inconsiderable.\n",
+            "not inconsiderable",
+        ),
+        (
+            "Setup is not for the faint of heart.\n",
+            "not for the faint of heart",
+        ),
         ("The cost is not unimportant.\n", "not unimportant"),
-        ("The change is not inconsequential.\n", "not inconsequential"),
-        ("The shape is not unfamiliar to the team.\n", "not unfamiliar"),
+        (
+            "The change is not inconsequential.\n",
+            "not inconsequential",
+        ),
+        (
+            "The shape is not unfamiliar to the team.\n",
+            "not unfamiliar",
+        ),
         ("Shipping this was no easy feat.\n", "no easy feat"),
         ("That is not a small feat.\n", "not a small feat"),
-        ("A green run is no small achievement.\n", "no small achievement"),
-        ("The port is no small undertaking.\n", "no small undertaking"),
-        ("The delay is due in no small part to the cache.\n", "in no small part"),
-        ("The gain comes in no small measure from batching.\n", "in no small measure"),
-        ("The upgrade remains no easy task.\n", "remains no easy task"),
-        ("The plan is not without difficulties.\n", "not without difficulties"),
+        (
+            "A green run is no small achievement.\n",
+            "no small achievement",
+        ),
+        (
+            "The port is no small undertaking.\n",
+            "no small undertaking",
+        ),
+        (
+            "The delay is due in no small part to the cache.\n",
+            "in no small part",
+        ),
+        (
+            "The gain comes in no small measure from batching.\n",
+            "in no small measure",
+        ),
+        (
+            "The upgrade remains no easy task.\n",
+            "remains no easy task",
+        ),
+        (
+            "The plan is not without difficulties.\n",
+            "not without difficulties",
+        ),
         ("The choice is not without irony.\n", "not without irony"),
         ("The fix is far from simple.\n", "far from simple"),
         ("The failure is hardly trivial.\n", "hardly trivial"),
         ("The numbers are less than stellar.\n", "less than stellar"),
-        ("The docs leave much to be desired.\n", "leave much to be desired"),
-        ("It wouldn't be wrong to say the cache is dead.\n", "It wouldn't be wrong to say"),
+        (
+            "The docs leave much to be desired.\n",
+            "leave much to be desired",
+        ),
+        (
+            "It wouldn't be wrong to say the cache is dead.\n",
+            "It wouldn't be wrong to say",
+        ),
         ("It's safe to say the parser is done.\n", "It's safe to say"),
         ("It is not hard to see why.\n", "It is not hard to see"),
-        ("It is not hard to imagine a crash here.\n", "It is not hard to imagine"),
-        ("The output was odd, to say the least.\n", "to say the least"),
+        (
+            "It is not hard to imagine a crash here.\n",
+            "It is not hard to imagine",
+        ),
+        (
+            "The output was odd, to say the least.\n",
+            "to say the least",
+        ),
         ("The config is not rocket science.\n", "not rocket science"),
-        ("This is not exactly a walk in the park.\n", "not exactly a walk in the park"),
-        ("The migration is not a walk in the park.\n", "not a walk in the park"),
-        ("The cost is not to be underestimated.\n", "not to be underestimated"),
-        ("The cost is not to be overlooked.\n", "not to be overlooked"),
-        ("The risk is not to be taken lightly.\n", "not to be taken lightly"),
-        ("The gain is not to be sneezed at.\n", "not to be sneezed at"),
-        ("The build is slow, not to mention flaky.\n", ", not to mention"),
-        ("The setup isn't for the faint of heart.\n", "isn't for the faint of heart"),
-        ("The risk isn't to be underestimated.\n", "isn't to be underestimated"),
-        ("The rollout wasn't without its challenges.\n", "wasn't without its challenges"),
-        ("The API surface isn't inconsiderable.\n", "isn't inconsiderable"),
+        (
+            "This is not exactly a walk in the park.\n",
+            "not exactly a walk in the park",
+        ),
+        (
+            "The migration is not a walk in the park.\n",
+            "not a walk in the park",
+        ),
+        (
+            "The cost is not to be underestimated.\n",
+            "not to be underestimated",
+        ),
+        (
+            "The cost is not to be overlooked.\n",
+            "not to be overlooked",
+        ),
+        (
+            "The risk is not to be taken lightly.\n",
+            "not to be taken lightly",
+        ),
+        (
+            "The gain is not to be sneezed at.\n",
+            "not to be sneezed at",
+        ),
+        (
+            "The build is slow, not to mention flaky.\n",
+            ", not to mention",
+        ),
+        (
+            "The setup isn't for the faint of heart.\n",
+            "isn't for the faint of heart",
+        ),
+        (
+            "The risk isn't to be underestimated.\n",
+            "isn't to be underestimated",
+        ),
+        (
+            "The rollout wasn't without its challenges.\n",
+            "wasn't without its challenges",
+        ),
+        (
+            "The API surface isn't inconsiderable.\n",
+            "isn't inconsiderable",
+        ),
         ("This isn't rocket science.\n", "isn't rocket science"),
     ] {
         let report = run(text, Profile::Doc);
@@ -97,14 +202,29 @@ fn i007_every_member_fires_on_its_span() {
 #[test]
 fn i008_every_member_fires_on_its_span() {
     for (text, span) in [
-        ("It is not uncommon for the cache to miss.\n", "not uncommon"),
-        ("It is not entirely clear why the test flakes.\n", "not entirely clear"),
-        ("The current latency is less than ideal.\n", "less than ideal"),
+        (
+            "It is not uncommon for the cache to miss.\n",
+            "not uncommon",
+        ),
+        (
+            "It is not entirely clear why the test flakes.\n",
+            "not entirely clear",
+        ),
+        (
+            "The current latency is less than ideal.\n",
+            "less than ideal",
+        ),
         ("The design is not without merit.\n", "not without merit"),
-        ("Porting to ARM is not a trivial undertaking.\n", "not a trivial undertaking"),
+        (
+            "Porting to ARM is not a trivial undertaking.\n",
+            "not a trivial undertaking",
+        ),
         ("The benchmark numbers are not the best.\n", "not the best"),
         ("The load is not insignificant.\n", "not insignificant"),
-        ("The queue is not quite right after failover.\n", "not quite right"),
+        (
+            "The queue is not quite right after failover.\n",
+            "not quite right",
+        ),
         ("A retry is not unusual here.\n", "not unusual"),
         ("A second pass is not unreasonable.\n", "not unreasonable"),
         ("A crash is not unlikely under load.\n", "not unlikely"),
@@ -112,34 +232,73 @@ fn i008_every_member_fires_on_its_span() {
         ("The result is not unexpected.\n", "not unexpected"),
         ("The team is not unaware of the gap.\n", "not unaware"),
         ("The change is not unwelcome.\n", "not unwelcome"),
-        ("The parser is not incapable of recovery.\n", "not incapable"),
-        ("The field is not irrelevant to the digest.\n", "not irrelevant"),
+        (
+            "The parser is not incapable of recovery.\n",
+            "not incapable",
+        ),
+        (
+            "The field is not irrelevant to the digest.\n",
+            "not irrelevant",
+        ),
         ("The order is not illogical.\n", "not illogical"),
         ("A stale read is not unheard of.\n", "not unheard of"),
         ("Misses are not infrequent.\n", "not infrequent"),
         ("The cache misses not infrequently.\n", "not infrequently"),
         ("A rewrite is not a trivial task.\n", "not a trivial task"),
         ("This is not a trivial matter.\n", "not a trivial matter"),
-        ("Recovery is not a trivial problem.\n", "not a trivial problem"),
+        (
+            "Recovery is not a trivial problem.\n",
+            "not a trivial problem",
+        ),
         ("This is not a trivial change.\n", "not a trivial change"),
-        ("The port is not a trivial exercise.\n", "not a trivial exercise"),
+        (
+            "The port is not a trivial exercise.\n",
+            "not a trivial exercise",
+        ),
         ("The move is not an easy task.\n", "not an easy task"),
         ("Rollback is not a simple matter.\n", "not a simple matter"),
         ("The leak is not a minor issue.\n", "not a minor issue"),
-        ("The patch took no small amount of work.\n", "no small amount"),
-        ("The plan is not without any risk.\n", "not without any risk"),
-        ("The plan is not without its risks.\n", "not without its risks"),
+        (
+            "The patch took no small amount of work.\n",
+            "no small amount",
+        ),
+        (
+            "The plan is not without any risk.\n",
+            "not without any risk",
+        ),
+        (
+            "The plan is not without its risks.\n",
+            "not without its risks",
+        ),
         ("The proposal is not without value.\n", "not without value"),
         ("The cache is not without a cost.\n", "not without a cost"),
-        ("The rule is not without precedent.\n", "not without precedent"),
-        ("The choice is not without controversy.\n", "not without controversy"),
+        (
+            "The rule is not without precedent.\n",
+            "not without precedent",
+        ),
+        (
+            "The choice is not without controversy.\n",
+            "not without controversy",
+        ),
         ("The delay is not without reason.\n", "not without reason"),
-        ("The retry is not without consequences.\n", "not without consequences"),
-        ("The docs are not entirely accurate.\n", "not entirely accurate"),
+        (
+            "The retry is not without consequences.\n",
+            "not without consequences",
+        ),
+        (
+            "The docs are not entirely accurate.\n",
+            "not entirely accurate",
+        ),
         ("The claim is not entirely true.\n", "not entirely true"),
         ("The guess is not entirely wrong.\n", "not entirely wrong"),
-        ("The result is not entirely surprising.\n", "not entirely surprising"),
-        ("The cause is not entirely obvious.\n", "not entirely obvious"),
+        (
+            "The result is not entirely surprising.\n",
+            "not entirely surprising",
+        ),
+        (
+            "The cause is not entirely obvious.\n",
+            "not entirely obvious",
+        ),
         ("The fix is not entirely certain.\n", "not entirely certain"),
         ("We are not entirely sure.\n", "not entirely sure"),
         ("The layout is not exactly ideal.\n", "not exactly ideal"),
@@ -156,17 +315,26 @@ fn i008_every_member_fires_on_its_span() {
         ("The cause is far from clear.\n", "far from clear"),
         ("The question is far from settled.\n", "far from settled"),
         ("The path is less than optimal.\n", "less than optimal"),
-        ("It is not unreasonable to expect a retry.\n", "It is not unreasonable to"),
+        (
+            "It is not unreasonable to expect a retry.\n",
+            "It is not unreasonable to",
+        ),
         ("The result is not the worst.\n", "not the worst"),
         ("The error text could be better.\n", "could be better"),
-        ("The docs have room for improvement.\n", "room for improvement"),
+        (
+            "The docs have room for improvement.\n",
+            "room for improvement",
+        ),
         ("The API is not terribly consistent.\n", "not terribly"),
         ("The patch isn't quite right.\n", "isn't quite right"),
         ("The cause isn't entirely clear.\n", "isn't entirely clear"),
         ("Timeouts aren't uncommon under load.\n", "aren't uncommon"),
         ("The plan isn't without merit.\n", "isn't without merit"),
         ("The heap wasn't terribly fragmented.\n", "wasn't terribly"),
-        ("The link is not the best-effort transport.\n", "not the best"),
+        (
+            "The link is not the best-effort transport.\n",
+            "not the best",
+        ),
     ] {
         let report = run(text, Profile::Doc);
         assert_invariants(text, &report);
