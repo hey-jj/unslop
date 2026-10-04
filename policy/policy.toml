@@ -3,7 +3,7 @@
 # names. Lexicon files under words/ are canonical data referenced by rule ID.
 
 [policy]
-version = "0.1.6"
+version = "0.1.7"
 # sha256 over the canonical serialization of the whole package (sorted keys,
 # LF endings, sorted file list), computed with this field set to the empty
 # string. The build embeds the computed value in every result and snapshot.
@@ -97,8 +97,8 @@ lifecycle = "blocking"
 origin = "owner-mandate"
 waiver = "human-only"
 view = "norm"
-match = { kind = "word-set", lexicon = "words/ornamental.txt", case = "insensitive", boundary = "word" }
-guard = "Prose only. Code spans, fences, link URLs, and identifiers are excluded by segmentation. Violation tier survives here because no term on this list has a plain sense left to mean: a writer reaching for tapestry or supercharge is decorating. The words that do keep a plain sense (unlock, leverage, robust, foster, testament, bedrock) are SLOP-A010, which reports and lets the writer answer for them."
+match = { kind = "word-set", lexicon = "words/ornamental.txt", case = "insensitive", boundary = "word", params = { proper_noun_compound = true } }
+guard = "Prose only. Code spans, fences, link URLs, and identifiers are excluded by segmentation. A capitalized term one space after another capitalized word mid-sentence is part of a product name such as Samsung Vibrant and is exempt, unless that word is a function word, an imperative opener of marketing copy such as Experience or Deliver, or a term on this list or SLOP-A010. A hyphenated word counts whole, so World-Class Seamless still fires. Violation tier survives here because no term on this list has a plain sense left to mean: a writer reaching for tapestry or supercharge is decorating. The words that do keep a plain sense (unlock, leverage, robust, foster, testament, bedrock) are SLOP-A010, which reports and lets the writer answer for them."
 profiles = { default = "apply" }
 
 [[rule]]
@@ -133,9 +133,11 @@ lifecycle = "blocking"
 origin = "research"
 view = "norm"
 match = { kind = "word-set", lexicon = "words/era-overuse.txt", case = "insensitive", boundary = "word" }
-guard = "Exempt when the object is a concrete typographic or UI action (highlighting text in an editor, a showcase application as a proper noun) or, for load-bearing, literal structural engineering. Enhance passes when the changed metric and baseline are named."
+guard = "Exempt when the object is a concrete typographic or UI action (highlighting text in an editor, a showcase application as a proper noun) or, for load-bearing, literal structural engineering. Syntax highlighting, in space or hyphen spelling, is exempt through [rule.exemptions]. Enhance passes when the changed metric and baseline are named."
 judge = "Is the word doing work a plain verb would do, or naming a concrete measured change?"
 profiles = { default = "apply" }
+[rule.exemptions]
+highlighting = ['\bsyntax highlighting', '\bsyntax-highlighting']
 
 [[rule]]
 id = "SLOP-A004"
@@ -239,8 +241,8 @@ tier = "candidate"
 lifecycle = "blocking"
 origin = "owner-mandate"
 view = "norm"
-match = { kind = "word-set", lexicon = "words/decorative-diction.txt", case = "insensitive", boundary = "word" }
-guard = "The half of the ornamental set whose words still have a plain sense to mean. A lock unlocks, a lever gives leverage, a statistic is robust, a foster parent fosters, a will is a testament, and granite is bedrock. Each one is also the word a model reaches for when it wants a sentence to sound larger, so the finding goes to the writer as a candidate with the judge question. Terms with no plain sense left stay on SLOP-A001 at violation."
+match = { kind = "word-set", lexicon = "words/decorative-diction.txt", case = "insensitive", boundary = "word", params = { proper_noun_compound = true } }
+guard = "The half of the ornamental set whose words still have a plain sense to mean. A lock unlocks, a lever gives leverage, a statistic is robust, a foster parent fosters, a will is a testament, and granite is bedrock. A capitalized term one space after another capitalized word mid-sentence is part of a product name such as Amazon Bedrock and is exempt, unless that word is a function word, an imperative opener of marketing copy such as Experience or Deliver, or a term on this list or SLOP-A001. A hyphenated word counts whole. Each one is also the word a model reaches for when it wants a sentence to sound larger, so the finding goes to the writer as a candidate with the judge question. Terms with no plain sense left stay on SLOP-A001 at violation."
 judge = "Is the plain sense meant here, or is the word decorating?"
 profiles = { default = "apply" }
 
@@ -662,11 +664,11 @@ lifecycle = "blocking"
 origin = "harvest"
 view = "norm"
 match = { kind = "word-set", lexicon = "words/importance-adjectives.txt", case = "insensitive", boundary = "word" }
-guard = "Exempt in fixed technical senses: critical section, critical path, significant figures, and statistical significance reported with the test and effect size. Elsewhere the word ranks the claim instead of stating the consequence. Every profile applies it because crucial, essential, and vital are the plainest markers of generated diction in ordinary writing."
+guard = "Exempt in fixed technical senses: critical section, critical path, significant figures, most or least significant bit, byte, digit, or nibble in space or hyphen spelling, and statistical significance reported with the test and effect size. Elsewhere the word ranks the claim instead of stating the consequence. Every profile applies it because crucial, essential, and vital are the plainest markers of generated diction in ordinary writing."
 profiles = { default = "apply" }
 [rule.exemptions]
 critical = ["critical section", "critical sections", "critical path", "critical paths"]
-significant = ["significant figures", "statistically significant"]
+significant = ["significant figures", "statistically significant", '\bmost significant bit\b', '\bmost significant bits\b', '\bmost-significant bit\b', '\bmost-significant bits\b', '\bmost-significant-bit\b', '\bmost-significant-bits\b', '\bmost significant-bit\b', '\bmost significant-bits\b', '\bmost significant byte\b', '\bmost significant bytes\b', '\bmost-significant byte\b', '\bmost-significant bytes\b', '\bmost-significant-byte\b', '\bmost-significant-bytes\b', '\bmost significant-byte\b', '\bmost significant-bytes\b', '\bmost significant digit\b', '\bmost significant digits\b', '\bmost-significant digit\b', '\bmost-significant digits\b', '\bmost-significant-digit\b', '\bmost-significant-digits\b', '\bmost significant-digit\b', '\bmost significant-digits\b', '\bmost significant nibble\b', '\bmost significant nibbles\b', '\bmost-significant nibble\b', '\bmost-significant nibbles\b', '\bmost-significant-nibble\b', '\bmost-significant-nibbles\b', '\bmost significant-nibble\b', '\bmost significant-nibbles\b', '\bleast significant bit\b', '\bleast significant bits\b', '\bleast-significant bit\b', '\bleast-significant bits\b', '\bleast-significant-bit\b', '\bleast-significant-bits\b', '\bleast significant-bit\b', '\bleast significant-bits\b', '\bleast significant byte\b', '\bleast significant bytes\b', '\bleast-significant byte\b', '\bleast-significant bytes\b', '\bleast-significant-byte\b', '\bleast-significant-bytes\b', '\bleast significant-byte\b', '\bleast significant-bytes\b', '\bleast significant digit\b', '\bleast significant digits\b', '\bleast-significant digit\b', '\bleast-significant digits\b', '\bleast-significant-digit\b', '\bleast-significant-digits\b', '\bleast significant-digit\b', '\bleast significant-digits\b', '\bleast significant nibble\b', '\bleast significant nibbles\b', '\bleast-significant nibble\b', '\bleast-significant nibbles\b', '\bleast-significant-nibble\b', '\bleast-significant-nibbles\b', '\bleast significant-nibble\b', '\bleast significant-nibbles\b']
 
 [[rule]]
 id = "SLOP-I003"
@@ -1066,11 +1068,11 @@ lifecycle = "blocking"
 origin = "incident"
 view = "norm"
 match = { kind = "word-set", lexicon = "words/first-person.txt", case = "insensitive", boundary = "word" }
-guard = "Plain authorial first person. The trigger is presence, the rule is core rule 1. It is off in general-writing, blog-post, email, social-post, and comment, where the writer speaking as a person is the content, and relaxes in report. In doc it applies: reference writing addresses the reader and excludes the writer as its audience. First person that narrates the drafting process is SLOP-F004, which fires in every profile and relaxes in comment. The pronoun entry is exempt inside the token I/O, where the slash makes both letters word-bounded."
+guard = "Plain authorial first person. The trigger is presence, the rule is core rule 1. It is off in general-writing, blog-post, email, social-post, and comment, where the writer speaking as a person is the content, and relaxes in report. In doc it applies: reference writing addresses the reader and excludes the writer as its audience. First person that narrates the drafting process is SLOP-F004, which fires in every profile and relaxes in comment. The pronoun entry is exempt inside the token I/O, where the slash makes both letters word-bounded, and as the Roman numeral directly after form, type, class, phase, part, stage, tier, level, mode, or group (direct form I, type I error)."
 judge = "Core rule 1 test: fact about the subject or fact about the author?"
 profiles = { default = "off", report = "relax", doc = "apply" }
 [rule.exemptions]
-i = ["i/o"]
+i = ["i/o", '\bform i', '\btype i', '\bclass i', '\bphase i', '\bpart i', '\bstage i', '\btier i', '\blevel i', '\bmode i', '\bgroup i']
 
 [[rule]]
 id = "SLOP-F002"

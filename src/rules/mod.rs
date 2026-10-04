@@ -101,6 +101,10 @@ pub fn implemented_param_keys() -> &'static [(&'static str, &'static str)] {
         // V002: the anchored subset of the assistant-voice lexicon, applied in
         // engine::accept_word_hit beside the whole-rule block-start position.
         ("SLOP-V002", "block_start_only"),
+        // Read in engine::accept_word_hit after the exemption phrases, so a
+        // capitalized term inside a product name stays silent.
+        ("SLOP-A001", "proper_noun_compound"),
+        ("SLOP-A010", "proper_noun_compound"),
         ("SLOP-M005", "unclosed_fence"),
         ("SLOP-M005", "raw_html_dominance_pct"),
         ("SLOP-M005", "raw_html_dominance_floor_bytes"),

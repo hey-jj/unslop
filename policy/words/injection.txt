@@ -7,7 +7,6 @@ disregard previous instructions
 disregard the above
 forget your instructions
 new instructions:
-system prompt
 developer prompt
 you are an ai
 you are a helpful assistant

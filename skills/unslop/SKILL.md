@@ -14,6 +14,14 @@ as a detector of authorship, never cite a finding as evidence that a person or a
 model wrote something, and if asked whether a text was machine-written, decline
 and offer the pattern check instead.
 
+## What the linter is for
+
+The linter catches the pitfalls of text an LLM wrote: filler, hedging, contrast scaffolding, puffery, invented process claims, and the other patterns this skill lists. It is an aid to the agent's judgment. A flagged span is a question, and the agent answers it by asking what the span is before asking what the rule says.
+
+A span that is an official product or company name (`Amazon Bedrock`), a standard technical term (`most significant bit`, `direct form I`, `syntax highlighting`, the Git `upstream` branch), API or configuration vocabulary (`system prompt`), a license or notice text, a quotation, a proper noun, or a term a person other than the writer chose is correct as written. Leave it exactly as it is. Record the finding as a false positive and route it to the waiver path or a policy fix. Never rename, paraphrase, backtick, or reword such a span to make a finding go away, and never invent a section, a sentence, or metadata to satisfy a structural rule.
+
+The exit code is the ship bar for prose the writer authored. For a span the writer did not author, the agent's judgment is the bar, and a false positive is a defect in the policy. The policy gets the fix.
+
 ## The loop
 
 Every draft goes through both layers. Neither one alone is the review. The linter

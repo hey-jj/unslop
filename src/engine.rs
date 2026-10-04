@@ -331,7 +331,28 @@ fn unicode_word_boundary(hay: &str, at: usize) -> bool {
     before != after
 }
 
-fn exempted(hay: &str, span: &Range<usize>, phrases: &[String]) -> bool {
+/// Case-insensitive covering-phrase check for `[rule.exemptions]`. A phrase
+/// exempts a hit when it contains the hit span. A plain phrase matches
+/// anywhere, inside a longer token too, so `cpu utilization` covers
+/// `vCPU utilization`. A phrase that starts with `\b` must open on a word
+/// edge, so `\bform i` covers `direct form I` and never `platform I`. A
+/// phrase that ends with `\b` must close on a word edge, so `upstream ref\b`
+/// never covers `upstream reference`.
+///
+/// A space in a phrase matches a run of whitespace. When that run holds a
+/// line break, the match is read again in the source text through `origin`
+/// (the norm view and its source), where each gap must be spaces and tabs
+/// with at most one line break. A line wrap keeps the exemption. A blank
+/// line, a heading boundary with or without a blank line after it, or a new
+/// list item ends it. `lines_are_blocks` is true for formats that read each
+/// source line as its own block, such as a commit body or plain text.
+fn exempted(
+    hay: &str,
+    span: &Range<usize>,
+    phrases: &[String],
+    origin: Option<(&NormView, &str)>,
+    lines_are_blocks: bool,
+) -> bool {
     if phrases.is_empty() {
         return false;
     }
@@ -344,18 +365,322 @@ fn exempted(hay: &str, span: &Range<usize>, phrases: &[String]) -> bool {
     // position by lowercasing the prefix.
     let rel_start = hay[win_start..span.start].to_lowercase().len();
     let rel_end = rel_start + hay[span.start..span.end].to_lowercase().len();
-    for phrase in phrases {
-        let mut at = 0usize;
-        while let Some(pos) = window[at..].find(phrase.as_str()) {
-            let s = at + pos;
-            let e = s + phrase.len();
-            if s <= rel_start && e >= rel_end {
+    let is_word = |c: char| unicode_ident::is_xid_continue(c);
+    for raw in phrases {
+        let (phrase, open) = match raw.strip_prefix("\\b") {
+            Some(p) => (p, true),
+            None => (raw.as_str(), false),
+        };
+        let (phrase, close) = match phrase.strip_suffix("\\b") {
+            Some(p) => (p, true),
+            None => (phrase, false),
+        };
+        if phrase.is_empty() {
+            continue;
+        }
+        for (s, _) in window.char_indices() {
+            if s > rel_start {
+                break;
+            }
+            let Some(e) = phrase_end(&window, s, phrase, None) else {
+                continue;
+            };
+            let before = if s == 0 {
+                hay[..win_start].chars().next_back()
+            } else {
+                window[..s].chars().next_back()
+            };
+            let open_ok = !open
+                || !phrase.chars().next().is_some_and(is_word)
+                || !before.is_some_and(is_word);
+            let after = if e == window.len() {
+                hay[win_end..].chars().next()
+            } else {
+                window[e..].chars().next()
+            };
+            let close_ok = !close || !after.is_some_and(is_word);
+            if s <= rel_start
+                && e >= rel_end
+                && open_ok
+                && close_ok
+                && wrap_ok(
+                    hay,
+                    win_start,
+                    &window,
+                    s..e,
+                    phrase,
+                    origin,
+                    lines_are_blocks,
+                )
+            {
                 return true;
             }
-            at = s + 1;
         }
     }
     false
+}
+
+/// True when a phrase match at `m` in the lowercased `window` holds no line
+/// break, or when every line break in it is a wrap. The norm view writes a
+/// block join as a line break with an empty source range and a hard break as
+/// one with its own source bytes. In markdown a soft wrap is already a space,
+/// so a block join inside the match is a real boundary, such as a heading
+/// followed by its paragraph, and ends the match. Where each source line is
+/// its own block, a block join is a wrapped line, and a line that opens with
+/// `#` ends the match instead. In both cases the source text must still match
+/// the phrase with at most one line break per gap, which rules out a blank
+/// line and a new list item.
+fn wrap_ok(
+    hay: &str,
+    win_start: usize,
+    window: &str,
+    m: Range<usize>,
+    phrase: &str,
+    origin: Option<(&NormView, &str)>,
+    lines_are_blocks: bool,
+) -> bool {
+    if !window[m.clone()].contains(['\n', '\r']) {
+        return true;
+    }
+    let (Some(hs), Some(he)) = (
+        hay_offset(hay, win_start, m.start),
+        hay_offset(hay, win_start, m.end),
+    ) else {
+        return false;
+    };
+    if let Some((n, _)) = origin {
+        let block_join = n.segs.iter().any(|seg| {
+            seg.norm.start >= hs
+                && seg.norm.end <= he
+                && seg.src.is_empty()
+                && n.text[seg.norm.clone()].contains(['\n', '\r'])
+        });
+        if block_join && !lines_are_blocks {
+            return false;
+        }
+    }
+    let text = match origin {
+        Some((n, src)) => match n.to_source(hs..he) {
+            Some(r) => crate::widen_to_char_boundaries(src, r),
+            None => return false,
+        },
+        None => hs..he,
+    };
+    let full = match origin {
+        Some((_, src)) => src,
+        None => hay,
+    };
+    let line_start = full[..text.start].rfind(['\n', '\r']).map_or(0, |i| i + 1);
+    if lines_are_blocks && full[line_start..].trim_start().starts_with('#') {
+        return false;
+    }
+    let source = &full[text];
+    let lower = source.to_lowercase();
+    phrase_end(&lower, 0, phrase, Some(1)) == Some(lower.len())
+}
+
+/// The `hay` offset whose lowercased prefix from `win_start` is `rel` bytes
+/// long, or `None` when `rel` falls inside one lowercased character.
+fn hay_offset(hay: &str, win_start: usize, rel: usize) -> Option<usize> {
+    let mut acc = 0usize;
+    for (i, c) in hay[win_start..].char_indices() {
+        if acc == rel {
+            return Some(win_start + i);
+        }
+        if acc > rel {
+            return None;
+        }
+        acc += c.to_lowercase().map(char::len_utf8).sum::<usize>();
+    }
+    (acc == rel).then_some(hay.len())
+}
+
+/// The end of `phrase` matched at `start` in `text`, or `None` when it does
+/// not match there. A space in the phrase matches one or more spaces, tabs,
+/// and line breaks. A line break is `\n`, a bare `\r`, or `\r\n` counted as
+/// one. `max_breaks` caps the line breaks in each such run when set. Every
+/// other byte matches itself.
+fn phrase_end(text: &str, start: usize, phrase: &str, max_breaks: Option<usize>) -> Option<usize> {
+    let t = text.as_bytes();
+    let mut i = start;
+    for &b in phrase.as_bytes() {
+        if b == b' ' {
+            let from = i;
+            let mut breaks = 0usize;
+            while let Some(&c) = t.get(i) {
+                match c {
+                    b' ' | b'\t' => i += 1,
+                    // A line break is `\n`, a bare `\r`, or `\r\n` read as one.
+                    b'\r' | b'\n' if max_breaks.is_none_or(|m| breaks < m) => {
+                        breaks += 1;
+                        i += if c == b'\r' && t.get(i + 1) == Some(&b'\n') {
+                            2
+                        } else {
+                            1
+                        };
+                    }
+                    _ => break,
+                }
+            }
+            if i == from {
+                return None;
+            }
+        } else if t.get(i) == Some(&b) {
+            i += 1;
+        } else {
+            return None;
+        }
+    }
+    Some(i)
+}
+
+/// Function words and the imperative verbs that open marketing copy. A
+/// lexicon word capitalized after one of these is a heading, a sentence
+/// start, or a slogan, never a product name, so `The Bedrock of Our Approach`
+/// and `Experience Seamless Integration` still fire.
+const PROPER_NOUN_STOPWORDS: [&str; 83] = [
+    "a",
+    "an",
+    "the",
+    "this",
+    "that",
+    "these",
+    "those",
+    "our",
+    "your",
+    "their",
+    "its",
+    "my",
+    "his",
+    "her",
+    "we",
+    "you",
+    "they",
+    "it",
+    "i",
+    "in",
+    "on",
+    "of",
+    "for",
+    "with",
+    "to",
+    "and",
+    "or",
+    "but",
+    "at",
+    "by",
+    "from",
+    "as",
+    "is",
+    "are",
+    "be",
+    "into",
+    "how",
+    "why",
+    "what",
+    "via",
+    "experience",
+    "deliver",
+    "discover",
+    "introducing",
+    "unlock",
+    "build",
+    "create",
+    "achieve",
+    "enjoy",
+    "meet",
+    "transform",
+    "elevate",
+    "empower",
+    "explore",
+    "embrace",
+    "get",
+    "try",
+    "start",
+    "make",
+    "go",
+    "join",
+    "choose",
+    "find",
+    "use",
+    "bring",
+    "take",
+    "turn",
+    "let",
+    "give",
+    "learn",
+    "see",
+    "run",
+    "grow",
+    "scale",
+    "boost",
+    "simplify",
+    "streamline",
+    "maximize",
+    "accelerate",
+    "drive",
+    "power",
+    "ship",
+    "launch",
+];
+
+/// A capitalized lexicon hit that directly follows another capitalized word,
+/// one space apart, reads as the second word of a proper noun such as
+/// `Amazon Bedrock`. The check runs only for rules whose `match.params`
+/// sets `proper_noun_compound = true`. The preceding word must not be a
+/// function word or a term of any rule that sets the flag, so a title-case
+/// stack such as `Unlock Seamless Workflows` still fires. A hyphen joins the
+/// preceding word, so `World-Class Seamless` reads `world-class`, a lexicon
+/// term, and still fires. A soft line wrap
+/// reads as one space. A block break or terminal punctuation leaves no word
+/// one space before the term, so a sentence start never qualifies.
+fn proper_noun_compound(cp: &CompiledPolicy, hay: &str, span: &Range<usize>) -> bool {
+    if !hay[span.clone()]
+        .chars()
+        .next()
+        .is_some_and(char::is_uppercase)
+    {
+        return false;
+    }
+    let before = &hay[..span.start];
+    let Some(gap) = before.chars().next_back() else {
+        return false;
+    };
+    if gap != ' ' && gap != '\u{a0}' {
+        return false;
+    }
+    let lead = &before[..before.len() - gap.len_utf8()];
+    let word_start = lead
+        .char_indices()
+        .rev()
+        .take_while(|&(_, c)| unicode_ident::is_xid_continue(c) || c == '-')
+        .last()
+        .map(|(i, _)| i);
+    let Some(word_start) = word_start else {
+        return false;
+    };
+    let prev = &lead[word_start..];
+    if !prev.chars().next().is_some_and(char::is_uppercase) {
+        return false;
+    }
+    let prev_lower = prev.to_lowercase();
+    if PROPER_NOUN_STOPWORDS.contains(&prev_lower.as_str()) {
+        return false;
+    }
+    !cp.pkg
+        .rules
+        .iter()
+        .filter(|r| proper_noun_flag(r))
+        .any(|r| r.terms.contains(&prev_lower))
+}
+
+/// True when the rule opts into the proper-noun compound exemption.
+fn proper_noun_flag(rule: &policy::Rule) -> bool {
+    rule.params
+        .as_table()
+        .and_then(|t| t.get("proper_noun_compound"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
 }
 
 /// True when the matched past participle is an adjective. Three left-context
@@ -842,7 +1167,15 @@ fn accept_word_hit(
             }
         }
     }
-    if exempted(hay, &span, &rule.exemptions) {
+    let origin = match (ctx, norm) {
+        (ScanCtx::Norm, Some(n)) => Some((n, src)),
+        _ => None,
+    };
+    let lines_are_blocks = config.input_format != crate::InputFormat::Markdown;
+    if exempted(hay, &span, &rule.exemptions, origin, lines_are_blocks) {
+        return;
+    }
+    if proper_noun_flag(rule) && proper_noun_compound(cp, hay, &span) {
         return;
     }
     // SLOP-A002: a past participle standing as an adjective is not the verb
